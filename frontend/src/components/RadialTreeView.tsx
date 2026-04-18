@@ -150,6 +150,7 @@ export function RadialTreeView({
               })
 
               const treeResult = treeResultMap.get(tree.tree_index)
+              const activePathNodeIds = new Set(treeResult?.active_path_node_ids ?? [])
               const highlightedEdges = new Set<string>()
               if (treeResult) {
                 const sequence = [...treeResult.active_path_node_ids, treeResult.selected_leaf_id]
@@ -189,15 +190,18 @@ export function RadialTreeView({
 
                   {tree.nodes
                     .filter((node) => node.node_id !== rootNodeId)
-                    .map((node) => (
-                      <circle
-                        key={`node-${tree.tree_index}-${node.node_id}`}
-                        cx={CENTER + node.x * SCALE}
-                        cy={CENTER + node.y * SCALE}
-                        r={3.25}
-                        className="tree-node"
-                      />
-                    ))}
+                    .map((node) => {
+                      const highlighted = activePathNodeIds.has(node.node_id)
+                      return (
+                        <circle
+                          key={`node-${tree.tree_index}-${node.node_id}`}
+                          cx={CENTER + node.x * SCALE}
+                          cy={CENTER + node.y * SCALE}
+                          r={3.25}
+                          className={highlighted ? 'tree-node active' : 'tree-node'}
+                        />
+                      )
+                    })}
 
                   {tree.leaves.map((leaf) => {
                     const highlighted =

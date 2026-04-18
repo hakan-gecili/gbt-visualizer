@@ -419,7 +419,11 @@ h2 {
 }
 
 .tree-node {
-  fill: rgba(27, 30, 29, 0.85);
+  fill: rgba(27, 30, 29, 0.18);
+}
+
+.tree-node.active {
+  fill: rgba(27, 30, 29, 0.9);
 }
 
 .shared-root-node {
