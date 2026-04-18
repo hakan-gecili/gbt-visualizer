@@ -1,73 +1,138 @@
-# React + TypeScript + Vite
+# Gradient Boosted Trees Visualizer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive web application for exploring and understanding Gradient Boosted Decision Tree models (LightGBM) at both the tree and ensemble level.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🎥 Demo
 
-## React Compiler
+<!-- Add your GIF here later -->
+<!-- Example:
+![Demo](./assets/demo.gif)
+-->
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Overview
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Tree-based ensemble models like LightGBM are powerful but often difficult to interpret.  
+This application provides an interactive interface to visualize how predictions are made, both at the individual tree level and across the entire ensemble.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The goal is to make model behavior transparent, intuitive, and explorable in real time.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Key Features
+
+### 🌳 Radial Tree Visualization
+- Each tree is displayed in a radial layout
+- The exact decision path for a selected observation is highlighted
+- Helps understand how the model traverses each tree
+
+### 📊 Per-Tree Contribution Chart
+- Shows how each tree contributes to the final prediction (margin space)
+- Positive contributions increase the score
+- Negative contributions decrease the score
+
+### 🎛️ Interactive Feature Controls
+- Modify feature values in real time
+- Instantly observe how predictions and decision paths change
+
+### 📁 Dataset Interaction
+- Load and inspect datasets
+- Select individual observations for analysis
+
+### 📦 Example Loader
+- Preconfigured datasets and models (e.g., breast cancer, diabetes)
+- Load examples instantly without manual file upload
+
+---
+
+## How It Works
+
+1. A LightGBM model is loaded from a `.txt` file  
+2. A dataset is loaded from a `.csv` file  
+3. For a selected observation:
+   - Each tree is evaluated
+   - The decision path (root → leaf) is computed
+   - Each tree’s contribution to the ensemble prediction is calculated  
+4. The application visualizes:
+   - Tree structure
+   - Active decision paths
+   - Per-tree contribution to the final prediction
+
+---
+
+## Tech Stack
+
+- **Frontend:** React + TypeScript (Vite)
+- **Backend:** FastAPI (Python)
+- **Model:** LightGBM
+
+---
+
+## Running Locally
+
+### Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
 ```
+
+### Usage
+
+* Upload a LightGBM model (.txt)
+* Upload a dataset (.csv)
+* Select an observation
+* Explore:
+    * Decision paths in trees
+    * Tree contributions
+    * Impact of feature changes
+
+Or use the Examples dropdown to quickly load preconfigured models and datasets.
+
+## Limitations
+
+* Supports LightGBM models only
+* Designed for binary classification
+* Assumes numerical input features
+* Large models (many trees or deep trees) may reduce visual clarity
+* Does not yet include feature importance or SHAP-based explanations
+
+## Roadmap
+
+* Feature importance (global and local)
+* SHAP value integration
+* Support for XGBoost and Random Forest
+* Improved scalability for larger models
+* Counterfactual explanation support
+
+## Motivation
+
+Gradient boosted trees are widely used in real-world applications, but their internal decision-making process is often difficult to interpret.
+
+This project aims to provide a clear and interactive way to:
+
+* Understand model behavior
+* Debug predictions
+* Build trust in machine learning systems
+
+## Author
+
+Hakan Gecili
+Senior Data Scientist
+
+GitHub: https://github.com/hakan-gecili
+
+## License
+
+MIT License (or update as needed)
