@@ -1,0 +1,56 @@
+import { apiFetch, createFormData } from './apiClient'
+import type {
+  DatasetUploadResponse,
+  LayoutResponse,
+  ModelUploadResponse,
+  PredictResponse,
+  SelectRowResponse,
+  SessionMetadataResponse,
+} from '../types/api'
+
+export function uploadModel(modelFile: File) {
+  return apiFetch<ModelUploadResponse>('/api/model/upload', {
+    method: 'POST',
+    body: createFormData({ model_file: modelFile }),
+  })
+}
+
+export function fetchLayout(sessionId: string) {
+  return apiFetch<LayoutResponse>(`/api/session/${sessionId}/layout`)
+}
+
+export function fetchMetadata(sessionId: string) {
+  return apiFetch<SessionMetadataResponse>(`/api/session/${sessionId}/metadata`)
+}
+
+export function uploadDataset(sessionId: string, dataFile: File) {
+  return apiFetch<DatasetUploadResponse>('/api/data/upload', {
+    method: 'POST',
+    body: createFormData({
+      session_id: sessionId,
+      data_file: dataFile,
+    }),
+  })
+}
+
+export function predict(sessionId: string, featureVector: Record<string, number>) {
+  return apiFetch<PredictResponse>('/api/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      feature_vector: featureVector,
+    }),
+  })
+}
+
+export function selectDatasetRow(sessionId: string, rowIndex: number) {
+  return apiFetch<SelectRowResponse>('/api/sample/select-row', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      row_index: rowIndex,
+    }),
+  })
+}
