@@ -21,6 +21,10 @@ async def load_dataset(upload_file: UploadFile) -> pd.DataFrame:
     return pd.read_csv(upload_file.file)
 
 
+def load_dataset_from_path(dataset_path: str) -> pd.DataFrame:
+    return pd.read_csv(dataset_path)
+
+
 def _canonicalize_feature_name(name: str) -> str:
     return str(name).strip().lower().replace(" ", "_")
 

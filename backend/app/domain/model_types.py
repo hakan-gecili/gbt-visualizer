@@ -149,10 +149,13 @@ def depth_to_radius(depth: int, max_depth: int, config: RadialLayoutConfig) -> f
 def assign_tree_sectors(model: NormalizedModel) -> None:
     if model.num_trees == 0:
         return
+    # SVG screen coordinates invert the Y axis, so visually rotating the ring
+    # counterclockwise to the top requires a -pi/2 angular offset.
+    angle_offset = -pi / 2
     delta = 2 * pi / model.num_trees
     for index, tree in enumerate(model.trees):
-        tree.sector_start_angle = index * delta
-        tree.sector_end_angle = (index + 1) * delta
+        tree.sector_start_angle = index * delta + angle_offset
+        tree.sector_end_angle = (index + 1) * delta + angle_offset
 
 
 def compute_tree_radial_layout(tree: NormalizedTree, config: RadialLayoutConfig) -> None:
@@ -210,4 +213,3 @@ def extract_edges(tree: NormalizedTree) -> List[Tuple[int, int]]:
         edges.append((node.node_id, node.left_child_id))
         edges.append((node.node_id, node.right_child_id))
     return edges
-

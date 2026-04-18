@@ -22,3 +22,7 @@ async def load_normalized_model(upload_file: UploadFile):
         if os.path.exists(temp_path):
             os.unlink(temp_path)
 
+
+def load_normalized_model_from_path(model_path: str):
+    booster = lgb.Booster(model_file=model_path)
+    return normalize_dumped_model(booster.dump_model())

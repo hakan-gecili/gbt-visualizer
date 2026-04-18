@@ -46,6 +46,20 @@ export type DatasetUploadResponse = {
   preview: PreviewPayload
 }
 
+export type ExamplesListResponse = {
+  examples: string[]
+}
+
+export type LoadExampleResponse = {
+  session_id: string
+  example_name: string
+  model_summary: ModelSummary
+  feature_metadata: FeatureMetadata[]
+  layout_summary: LayoutSummary
+  dataset_summary: DatasetSummary
+  preview: PreviewPayload
+}
+
 export type TreeLayoutNode = {
   node_id: number
   depth: number

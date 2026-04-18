@@ -1,7 +1,9 @@
 import { apiFetch, createFormData } from './apiClient'
 import type {
   DatasetUploadResponse,
+  ExamplesListResponse,
   LayoutResponse,
+  LoadExampleResponse,
   ModelUploadResponse,
   PredictResponse,
   SelectRowResponse,
@@ -30,6 +32,16 @@ export function uploadDataset(sessionId: string, dataFile: File) {
       session_id: sessionId,
       data_file: dataFile,
     }),
+  })
+}
+
+export function fetchExamples() {
+  return apiFetch<ExamplesListResponse>('/api/examples')
+}
+
+export function loadExample(exampleName: string) {
+  return apiFetch<LoadExampleResponse>(`/api/examples/${encodeURIComponent(exampleName)}/load`, {
+    method: 'POST',
   })
 }
 

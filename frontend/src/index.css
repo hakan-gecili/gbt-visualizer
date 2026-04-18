@@ -70,6 +70,7 @@ table {
 }
 
 .upload-panel,
+.examples-panel,
 .control-panel,
 .prediction-panel,
 .dataset-panel,
@@ -129,6 +130,33 @@ h2 {
   border-radius: 18px;
   background: var(--panel-strong);
   border: 1px solid var(--line);
+}
+
+.examples-copy {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+.examples-select-label {
+  display: block;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.examples-select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--ink);
+}
+
+.examples-select:disabled {
+  opacity: 0.55;
 }
 
 .file-card.subtle {

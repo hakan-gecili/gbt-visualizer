@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { DatasetTable } from './components/DatasetTable'
+import { ExamplesPanel } from './components/ExamplesPanel'
 import { FeatureControlPanel } from './components/FeatureControlPanel'
 import { PredictionSummary } from './components/PredictionSummary'
 import { RadialTreeView } from './components/RadialTreeView'
 import { UploadPanel } from './components/UploadPanel'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
-import { fetchLayout, predict, selectDatasetRow, uploadDataset, uploadModel } from './services/model'
+import { fetchExamples, fetchLayout, loadExample, predict, selectDatasetRow, uploadDataset, uploadModel } from './services/model'
 import type {
   DatasetSummary,
   FeatureMetadata,
@@ -30,6 +31,8 @@ function serializeFeatureVector(featureVector: Record<string, number>) {
 
 function App() {
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [availableExamples, setAvailableExamples] = useState<string[]>([])
+  const [selectedExample, setSelectedExample] = useState('')
   const [featureMetadata, setFeatureMetadata] = useState<FeatureMetadata[]>([])
   const [featureVector, setFeatureVector] = useState<Record<string, number>>({})
   const [layoutTrees, setLayoutTrees] = useState<TreeLayout[]>([])
@@ -45,6 +48,19 @@ function App() {
   const appliedFeatureVectorKeyRef = useRef('')
 
   const debouncedFeatureVector = useDebouncedValue(featureVector, 150)
+
+  useEffect(() => {
+    async function loadAvailableExamples() {
+      try {
+        const response = await fetchExamples()
+        setAvailableExamples(response.examples)
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to load examples.')
+      }
+    }
+
+    void loadAvailableExamples()
+  }, [])
 
   useEffect(() => {
     async function runPrediction() {
@@ -84,6 +100,7 @@ function App() {
       const layoutResponse = await fetchLayout(modelResponse.session_id)
       const nextFeatureVector = buildDefaultFeatureVector(modelResponse.feature_metadata)
 
+      setSelectedExample('')
       setSessionId(modelResponse.session_id)
       setFeatureMetadata(modelResponse.feature_metadata)
       setFeatureVector(nextFeatureVector)
@@ -123,6 +140,40 @@ function App() {
       appliedFeatureVectorKeyRef.current = ''
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Dataset upload failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleExampleSelect(exampleName: string) {
+    setSelectedExample(exampleName)
+    if (!exampleName) {
+      return
+    }
+
+    setBusy(true)
+    setErrorMessage(null)
+
+    try {
+      const response = await loadExample(exampleName)
+      const layoutResponse = await fetchLayout(response.session_id)
+      const nextFeatureVector = buildDefaultFeatureVector(response.feature_metadata)
+
+      setSessionId(response.session_id)
+      setFeatureMetadata(response.feature_metadata)
+      setFeatureVector(nextFeatureVector)
+      setLayoutTrees(layoutResponse.layout.trees)
+      setDatasetPreview(response.preview)
+      setDatasetSummary(response.dataset_summary)
+      setPrediction(null)
+      setTreeResults([])
+      setHoveredTreeIndex(null)
+      setSelectedRowIndex(null)
+      predictionRequestIdRef.current = 0
+      appliedFeatureVectorKeyRef.current = ''
+    } catch (error) {
+      setSelectedExample('')
+      setErrorMessage(error instanceof Error ? error.message : 'Example load failed.')
     } finally {
       setBusy(false)
     }
@@ -171,6 +222,12 @@ function App() {
           busy={busy}
           onModelUpload={handleModelUpload}
           onDatasetUpload={handleDatasetUpload}
+        />
+        <ExamplesPanel
+          examples={availableExamples}
+          selectedExample={selectedExample}
+          busy={busy}
+          onSelectExample={handleExampleSelect}
         />
         <FeatureControlPanel
           featureMetadata={featureMetadata}

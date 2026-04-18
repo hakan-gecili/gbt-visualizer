@@ -111,6 +111,20 @@ class DatasetUploadResponse(BaseModel):
     preview: PreviewPayload
 
 
+class ExamplesListResponse(BaseModel):
+    examples: List[str]
+
+
+class LoadExampleResponse(BaseModel):
+    session_id: str
+    example_name: str
+    model_summary: ModelSummary
+    feature_metadata: List[FeatureMetadata]
+    layout_summary: LayoutSummary
+    dataset_summary: DatasetSummary
+    preview: PreviewPayload
+
+
 class MetadataDatasetSummary(BaseModel):
     is_loaded: bool
     num_rows: int
@@ -124,4 +138,3 @@ class SessionMetadataResponse(BaseModel):
     model_summary: ModelSummary
     feature_metadata: List[FeatureMetadata]
     dataset_summary: MetadataDatasetSummary
-

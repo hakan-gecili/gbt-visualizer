@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_data import router as data_router
+from app.api.routes_examples import router as examples_router
 from app.api.routes_model import router as model_router
 from app.api.routes_predict import router as predict_router
 from app.api.routes_session import router as session_router
@@ -20,6 +21,7 @@ app.add_middleware(
 
 app.include_router(model_router)
 app.include_router(data_router)
+app.include_router(examples_router)
 app.include_router(predict_router)
 app.include_router(session_router)
 
