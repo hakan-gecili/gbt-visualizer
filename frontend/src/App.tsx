@@ -37,6 +37,7 @@ function App() {
   const [datasetSummary, setDatasetSummary] = useState<DatasetSummary | null>(null)
   const [prediction, setPrediction] = useState<PredictionSummaryType | null>(null)
   const [treeResults, setTreeResults] = useState<TreePredictionResult[]>([])
+  const [hoveredTreeIndex, setHoveredTreeIndex] = useState<number | null>(null)
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -91,6 +92,7 @@ function App() {
       setDatasetSummary(null)
       setPrediction(null)
       setTreeResults([])
+      setHoveredTreeIndex(null)
       setSelectedRowIndex(null)
       predictionRequestIdRef.current = 0
       appliedFeatureVectorKeyRef.current = ''
@@ -117,6 +119,7 @@ function App() {
       const nextFeatureVector = buildDefaultFeatureVector(response.feature_metadata)
       setFeatureVector(nextFeatureVector)
       setSelectedRowIndex(null)
+      setHoveredTreeIndex(null)
       appliedFeatureVectorKeyRef.current = ''
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Dataset upload failed.')
@@ -145,6 +148,7 @@ function App() {
       setErrorMessage(null)
       setPrediction(response.prediction)
       setTreeResults(response.tree_results)
+      setHoveredTreeIndex(null)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Row selection failed.')
     }
@@ -152,6 +156,7 @@ function App() {
 
   function handleFeatureChange(featureName: string, value: number) {
     setSelectedRowIndex(null)
+    setHoveredTreeIndex(null)
     setFeatureVector((current) => ({
       ...current,
       [featureName]: Number.isFinite(value) ? value : 0,
@@ -176,8 +181,18 @@ function App() {
 
       <section className="main-stage">
         {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
-        <PredictionSummary prediction={prediction} treeResults={treeResults} />
-        <RadialTreeView trees={layoutTrees} treeResults={treeResults} />
+        <PredictionSummary
+          prediction={prediction}
+          treeResults={treeResults}
+          hoveredTreeIndex={hoveredTreeIndex}
+          onHoverTree={setHoveredTreeIndex}
+        />
+        <RadialTreeView
+          trees={layoutTrees}
+          treeResults={treeResults}
+          hoveredTreeIndex={hoveredTreeIndex}
+          onHoverTree={setHoveredTreeIndex}
+        />
         <DatasetTable
           preview={datasetPreview}
           selectedRowIndex={selectedRowIndex}

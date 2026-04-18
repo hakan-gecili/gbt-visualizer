@@ -324,11 +324,69 @@ h2 {
   font-size: 1.3rem;
 }
 
-.contribution-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
+.contribution-chart-shell {
   margin-top: 16px;
+}
+
+.contribution-chart-copy {
+  color: var(--muted);
+  line-height: 1.45;
+  max-width: 82ch;
+}
+
+.contribution-chart-frame,
+.radial-shell {
+  position: relative;
+}
+
+.contribution-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(27, 30, 29, 0.08);
+}
+
+.chart-gridline {
+  stroke: rgba(27, 30, 29, 0.08);
+  stroke-width: 1;
+}
+
+.chart-baseline {
+  stroke: rgba(27, 30, 29, 0.62);
+  stroke-width: 1.2;
+}
+
+.chart-tick-mark {
+  stroke: rgba(27, 30, 29, 0.28);
+  stroke-width: 1;
+}
+
+.chart-axis-label {
+  fill: var(--muted);
+  font-size: 12px;
+  font-family: var(--mono);
+}
+
+.chart-bar {
+  cursor: pointer;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.chart-bar.active,
+.chart-bar:focus-visible {
+  opacity: 1;
+  transform: scaleX(1.02);
+}
+
+.chart-bar:focus-visible {
+  outline: none;
 }
 
 .radial-svg {
@@ -340,13 +398,14 @@ h2 {
     radial-gradient(circle at center, rgba(255, 255, 255, 0.9), rgba(240, 235, 226, 0.42));
 }
 
-.radial-shell {
-  position: relative;
-}
-
 .sector-fill {
   fill: rgba(255, 255, 255, 0.28);
   stroke: rgba(27, 30, 29, 0.04);
+}
+
+.sector-fill.active {
+  fill: rgba(255, 255, 255, 0.4);
+  stroke: rgba(27, 30, 29, 0.12);
 }
 
 .edge-line {
@@ -385,6 +444,7 @@ h2 {
   pointer-events: none;
 }
 
+.chart-tooltip,
 .radial-tooltip {
   position: fixed;
   z-index: 10;

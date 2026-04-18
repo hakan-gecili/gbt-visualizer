@@ -5,6 +5,8 @@ import type { TreeLayout, TreePredictionResult } from '../types/api'
 type RadialTreeViewProps = {
   trees: TreeLayout[]
   treeResults: TreePredictionResult[]
+  hoveredTreeIndex: number | null
+  onHoverTree: (treeIndex: number | null) => void
 }
 
 const VIEWBOX_SIZE = 920
@@ -59,7 +61,12 @@ function treeLabelIndices(numTrees: number) {
   return [...indices].sort((left, right) => left - right)
 }
 
-export function RadialTreeView({ trees, treeResults }: RadialTreeViewProps) {
+export function RadialTreeView({
+  trees,
+  treeResults,
+  hoveredTreeIndex,
+  onHoverTree,
+}: RadialTreeViewProps) {
   const [tooltip, setTooltip] = useState<{ treeIndex: number; x: number; y: number } | null>(null)
   const treeResultMap = new Map(treeResults.map((result) => [result.tree_index, result]))
   const maxAbsContribution = Math.max(...treeResults.map((result) => Math.abs(result.contribution)), 0)
@@ -93,7 +100,7 @@ export function RadialTreeView({ trees, treeResults }: RadialTreeViewProps) {
               <path
                 key={`sector-${tree.tree_index}`}
                 d={sectorPath(tree.sector_start_angle, tree.sector_end_angle, SCALE * 0.06, SCALE * 1.02)}
-                className="sector-fill"
+                className={hoveredTreeIndex === tree.tree_index ? 'sector-fill active' : 'sector-fill'}
               />
             ))}
 
@@ -101,12 +108,13 @@ export function RadialTreeView({ trees, treeResults }: RadialTreeViewProps) {
               const treeResult = treeResultMap.get(tree.tree_index)
               const contribution = treeResult?.contribution ?? 0
               const overlayAlpha = contributionIntensity(contribution, maxAbsContribution) * 0.85
+              const isHovered = hoveredTreeIndex === tree.tree_index
               return (
                 <path
                   key={`arc-${tree.tree_index}`}
                   d={contributionArc(tree.sector_start_angle + 0.01, tree.sector_end_angle - 0.01, SCALE * 1.08)}
-                  stroke={contributionColor(contribution, overlayAlpha)}
-                  strokeWidth={14}
+                  stroke={contributionColor(contribution, isHovered ? 1 : overlayAlpha)}
+                  strokeWidth={isHovered ? 18 : 14}
                   strokeLinecap="round"
                   fill="none"
                   onMouseMove={(event) => {
@@ -115,8 +123,12 @@ export function RadialTreeView({ trees, treeResults }: RadialTreeViewProps) {
                       x: event.clientX,
                       y: event.clientY,
                     })
+                    onHoverTree(tree.tree_index)
                   }}
-                  onMouseLeave={() => setTooltip(null)}
+                  onMouseLeave={() => {
+                    setTooltip(null)
+                    onHoverTree(null)
+                  }}
                 />
               )
             })}
@@ -161,7 +173,8 @@ export function RadialTreeView({ trees, treeResults }: RadialTreeViewProps) {
                       return null
                     }
 
-                    const highlighted = highlightedEdges.has(`${edge.source_id}-${edge.target_id}`)
+                    const highlighted =
+                      hoveredTreeIndex === tree.tree_index || highlightedEdges.has(`${edge.source_id}-${edge.target_id}`)
                     return (
                       <line
                         key={`${edge.source_id}-${edge.target_id}`}
@@ -187,7 +200,8 @@ export function RadialTreeView({ trees, treeResults }: RadialTreeViewProps) {
                     ))}
 
                   {tree.leaves.map((leaf) => {
-                    const highlighted = leaf.leaf_id === treeResult?.selected_leaf_id
+                    const highlighted =
+                      hoveredTreeIndex === tree.tree_index || leaf.leaf_id === treeResult?.selected_leaf_id
                     return (
                       <circle
                         key={`leaf-${tree.tree_index}-${leaf.leaf_id}`}
