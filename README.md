@@ -6,8 +6,6 @@ An interactive web application for exploring and understanding Gradient Boosted 
 
 ## 🎥 Demo
 
-<!-- Add your GIF here later -->
-<!-- Example:
 ![Demo](./assets/demo.gif)
 -->
 
