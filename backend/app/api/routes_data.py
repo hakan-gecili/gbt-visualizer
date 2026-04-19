@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.core.session_store import session_store
@@ -15,6 +17,7 @@ from app.services.dataset_service import (
 from app.services.prediction_service import predict_model
 
 router = APIRouter(prefix="/api", tags=["data"])
+logger = logging.getLogger(__name__)
 
 
 def _prediction_payload(prediction_result):
@@ -44,6 +47,12 @@ async def upload_data(
     data_file: UploadFile = File(...),
 ) -> DatasetUploadResponse:
     try:
+        logger.info(
+            "Received dataset upload: session_id=%s filename=%s content_type=%s",
+            session_id,
+            data_file.filename,
+            data_file.content_type,
+        )
         session = session_store.get(session_id)
         dataframe = await load_dataset(data_file)
         dataset_summary = summarize_dataset(dataframe, session.model.feature_names)
@@ -60,8 +69,10 @@ async def upload_data(
             preview=preview,
         )
     except KeyError as exc:
+        logger.exception("Dataset upload failed: missing session_id=%s", session_id)
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("Dataset upload failed: session_id=%s filename=%s", session_id, data_file.filename)
         raise HTTPException(status_code=400, detail=f"Failed to load dataset: {exc}") from exc
 
 
@@ -90,4 +101,3 @@ async def select_row(request: SelectRowRequest) -> SelectRowResponse:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except IndexError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-

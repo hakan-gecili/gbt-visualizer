@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -21,13 +22,17 @@ from app.services.model_normalizer import (
 )
 
 router = APIRouter(prefix="/api/examples", tags=["examples"])
+logger = logging.getLogger(__name__)
 
 EXAMPLES_ROOT = Path(__file__).resolve().parents[3] / "examples"
 
 
 def _example_directories() -> list[Path]:
     if not EXAMPLES_ROOT.exists():
-        return []
+        raise HTTPException(
+            status_code=500,
+            detail=f"Examples directory was not found at runtime: {EXAMPLES_ROOT}",
+        )
     return sorted([path for path in EXAMPLES_ROOT.iterdir() if path.is_dir()], key=lambda path: path.name)
 
 
@@ -61,13 +66,16 @@ def _resolve_example_files(example_name: str) -> tuple[Path, Path]:
 
 @router.get("", response_model=ExamplesListResponse)
 async def list_examples() -> ExamplesListResponse:
+    logger.info("Listing examples from %s", EXAMPLES_ROOT)
     examples = []
     for example_dir in _example_directories():
         try:
             _resolve_example_files(example_dir.name)
         except HTTPException:
+            logger.exception("Skipping invalid example directory: %s", example_dir)
             continue
         examples.append(example_dir.name)
+    logger.info("Discovered %d valid examples: %s", len(examples), examples)
     return ExamplesListResponse(examples=examples)
 
 
@@ -75,6 +83,12 @@ async def list_examples() -> ExamplesListResponse:
 async def load_example(example_name: str) -> LoadExampleResponse:
     try:
         model_path, dataset_path = _resolve_example_files(example_name)
+        logger.info(
+            "Loading example '%s' with model=%s dataset=%s",
+            example_name,
+            model_path,
+            dataset_path,
+        )
         model = load_normalized_model_from_path(str(model_path))
         feature_metadata = build_feature_metadata(model.feature_names)
         dataframe = load_dataset_from_path(str(dataset_path))
@@ -113,6 +127,8 @@ async def load_example(example_name: str) -> LoadExampleResponse:
     except HTTPException:
         raise
     except LightGBMModelNormalizationError as exc:
+        logger.exception("Example '%s' failed model normalization", example_name)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("Example '%s' failed to load", example_name)
         raise HTTPException(status_code=400, detail=f"Failed to load example '{example_name}': {exc}") from exc

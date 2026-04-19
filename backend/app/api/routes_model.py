@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.core.session_store import session_store
@@ -13,15 +15,19 @@ from app.services.model_normalizer import (
 )
 
 router = APIRouter(prefix="/api/model", tags=["model"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/upload", response_model=ModelUploadResponse)
 async def upload_model(model_file: UploadFile = File(...)) -> ModelUploadResponse:
     try:
+        logger.info("Received model upload: filename=%s content_type=%s", model_file.filename, model_file.content_type)
         model = await load_normalized_model(model_file)
     except LightGBMModelNormalizationError as exc:
+        logger.exception("Model upload failed normalization: filename=%s", model_file.filename)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("Model upload failed parsing: filename=%s", model_file.filename)
         raise HTTPException(status_code=400, detail=f"Failed to parse model: {exc}") from exc
 
     feature_metadata = build_feature_metadata(model.feature_names)
@@ -46,4 +52,3 @@ async def upload_model(model_file: UploadFile = File(...)) -> ModelUploadRespons
             "total_leaves": total_leaves,
         },
     )
-

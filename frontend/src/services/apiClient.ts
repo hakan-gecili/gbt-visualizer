@@ -1,7 +1,8 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, init)
+  const requestUrl = `${API_BASE}${path}`
+  const response = await fetch(requestUrl, init)
   if (!response.ok) {
     const text = await response.text()
     let message = text
@@ -11,7 +12,14 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     } catch {
       // keep raw response text
     }
-    throw new Error(message || `Request failed with status ${response.status}`)
+    const errorMessage = message || `Request failed with status ${response.status}`
+    console.error('API request failed', {
+      path,
+      requestUrl,
+      status: response.status,
+      message: errorMessage,
+    })
+    throw new Error(`${errorMessage} [${response.status}] (${requestUrl})`)
   }
   return (await response.json()) as T
 }
