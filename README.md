@@ -74,17 +74,68 @@ The goal is to make model behavior transparent, intuitive, and explorable in rea
 ### Backend
 
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
+pip install -r backend/requirements.txt
+uvicorn app.main:app --app-dir backend --reload
 ```
 
 ### Frontend
 ```bash
-cd frontend
 npm install
 npm run dev
 ```
+
+The frontend reads `VITE_API_BASE_URL` from the environment. For local development you can leave it unset if you proxy API requests through the same origin, or point it at your backend explicitly:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev
+```
+
+## Deploying On Render
+
+This repository is configured for Render with [render.yaml](./render.yaml).
+
+It deploys as two services:
+
+1. `lgbm-visual-backend` as a Python web service
+2. `lgbm-visual-frontend` as a static site
+
+### Backend service
+
+- Build command:
+
+```bash
+pip install -r backend/requirements.txt
+```
+
+- Start command:
+
+```bash
+uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
+```
+
+### Frontend service
+
+- Build command:
+
+```bash
+npm install && npm run build
+```
+
+- Publish directory:
+
+```bash
+frontend/dist
+```
+
+### Required Render environment variable
+
+Set this on the frontend Render service after the backend URL is known:
+
+```bash
+VITE_API_BASE_URL=https://<your-backend-service>.onrender.com
+```
+
+If you create services from the blueprint, Render will prompt you to fill this value because it is marked with `sync: false`.
 
 ### Usage
 
