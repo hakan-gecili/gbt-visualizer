@@ -352,8 +352,21 @@ h2 {
   font-size: 1.3rem;
 }
 
+.contribution-panel-shell {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.contribution-panel {
+  width: 100%;
+  max-width: 100%;
+  transition: width 180ms ease;
+}
+
 .contribution-chart-shell {
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .contribution-chart-copy {
@@ -417,6 +430,27 @@ h2 {
   outline: none;
 }
 
+.radial-panel-shell {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.radial-panel {
+  width: 100%;
+  max-width: 100%;
+  transition:
+    width 180ms ease,
+    min-height 180ms ease;
+}
+
+.radial-svg-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .radial-svg {
   width: 100%;
   aspect-ratio: 1;
@@ -424,6 +458,112 @@ h2 {
   border-radius: 24px;
   background:
     radial-gradient(circle at center, rgba(255, 255, 255, 0.9), rgba(240, 235, 226, 0.42));
+  transition: background 180ms ease;
+}
+
+.radial-shell.dark .radial-svg {
+  background:
+    radial-gradient(circle at center, rgba(28, 28, 28, 0.9), rgba(0, 0, 0, 1));
+}
+
+.radial-gauge-card,
+.radial-mode-toggle {
+  position: absolute;
+  z-index: 4;
+}
+
+.radial-gauge-card {
+  top: 14px;
+  left: 14px;
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 251, 245, 0.74);
+  border: 1px solid rgba(27, 30, 29, 0.08);
+  box-shadow: 0 10px 24px rgba(27, 30, 29, 0.12);
+}
+
+.radial-shell.dark .radial-gauge-card {
+  background: rgba(18, 18, 18, 0.8);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+.radial-gauge {
+  width: 100%;
+  height: 100%;
+}
+
+.gauge-track {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.gauge-needle {
+  transition: transform 280ms ease;
+}
+
+.gauge-value {
+  font-size: 0.95rem;
+  font-family: var(--mono);
+}
+
+.radial-mode-toggle {
+  top: 16px;
+  right: 16px;
+  border: 1px solid rgba(27, 30, 29, 0.12);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 251, 245, 0.82);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+
+.radial-shell.dark .radial-mode-toggle {
+  background: rgba(20, 20, 20, 0.86);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.radial-scale-control {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  max-width: 100%;
+  transition: width 180ms ease;
+}
+
+.radial-scale-label,
+.radial-scale-value {
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.radial-shell.dark .radial-scale-label,
+.radial-shell.dark .radial-scale-value {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.radial-scale-slider {
+  width: 100%;
+  accent-color: var(--accent);
 }
 
 .sector-fill {

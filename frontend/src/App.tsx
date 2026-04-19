@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { ContributionChartPanel } from './components/ContributionChartPanel'
 import { DatasetTable } from './components/DatasetTable'
 import { ExamplesPanel } from './components/ExamplesPanel'
 import { FeatureControlPanel } from './components/FeatureControlPanel'
@@ -40,6 +41,7 @@ function App() {
   const [datasetSummary, setDatasetSummary] = useState<DatasetSummary | null>(null)
   const [prediction, setPrediction] = useState<PredictionSummaryType | null>(null)
   const [treeResults, setTreeResults] = useState<TreePredictionResult[]>([])
+  const [panelScale, setPanelScale] = useState(1)
   const [hoveredTreeIndex, setHoveredTreeIndex] = useState<number | null>(null)
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
@@ -241,12 +243,19 @@ function App() {
         <PredictionSummary
           prediction={prediction}
           treeResults={treeResults}
+        />
+        <ContributionChartPanel
+          treeResults={treeResults}
+          panelScale={panelScale}
           hoveredTreeIndex={hoveredTreeIndex}
           onHoverTree={setHoveredTreeIndex}
         />
         <RadialTreeView
           trees={layoutTrees}
           treeResults={treeResults}
+          probability={prediction?.probability ?? null}
+          panelScale={panelScale}
+          onPanelScaleChange={setPanelScale}
           hoveredTreeIndex={hoveredTreeIndex}
           onHoverTree={setHoveredTreeIndex}
         />

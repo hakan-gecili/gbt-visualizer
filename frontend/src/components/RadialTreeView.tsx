@@ -5,6 +5,9 @@ import type { TreeLayout, TreePredictionResult } from '../types/api'
 type RadialTreeViewProps = {
   trees: TreeLayout[]
   treeResults: TreePredictionResult[]
+  probability: number | null
+  panelScale: number
+  onPanelScaleChange: (value: number) => void
   hoveredTreeIndex: number | null
   onHoverTree: (treeIndex: number | null) => void
 }
@@ -13,16 +16,86 @@ const VIEWBOX_SIZE = 920
 const CENTER = VIEWBOX_SIZE / 2
 const SCALE = VIEWBOX_SIZE * 0.38
 const MAX_TREE_LABELS = 12
-
-function contributionColor(value: number, alpha = 1) {
-  return value >= 0 ? `rgba(218, 88, 56, ${alpha})` : `rgba(34, 129, 126, ${alpha})`
-}
+const GAUGE_SIZE = 112
+const GAUGE_CENTER = GAUGE_SIZE / 2
+const GAUGE_RADIUS = 38
+const GAUGE_START_ANGLE = -200
+const GAUGE_SWEEP = 225
 
 function contributionIntensity(value: number, maxAbsValue: number) {
   if (maxAbsValue === 0) {
     return 0.25
   }
   return 0.2 + (Math.abs(value) / maxAbsValue) * 0.8
+}
+
+function gaugeArcPath(radius: number) {
+  const startRadians = (GAUGE_START_ANGLE * Math.PI) / 180
+  const endRadians = ((GAUGE_START_ANGLE + GAUGE_SWEEP) * Math.PI) / 180
+  const startX = GAUGE_CENTER + Math.cos(startRadians) * radius
+  const startY = GAUGE_CENTER + Math.sin(startRadians) * radius
+  const endX = GAUGE_CENTER + Math.cos(endRadians) * radius
+  const endY = GAUGE_CENTER + Math.sin(endRadians) * radius
+  return `M ${startX} ${startY} A ${radius} ${radius} 0 1 1 ${endX} ${endY}`
+}
+
+function gaugeNeedleAngle(probability: number) {
+  const clamped = Math.max(0, Math.min(1, probability))
+  return GAUGE_START_ANGLE + clamped * GAUGE_SWEEP
+}
+
+function radialTheme(isDarkMode: boolean) {
+  if (isDarkMode) {
+    return {
+      gradientInner: 'rgba(28, 28, 28, 0.9)',
+      gradientOuter: 'rgba(0, 0, 0, 1)',
+      sectorFill: 'rgba(255, 255, 255, 0.035)',
+      sectorStroke: 'rgba(255, 255, 255, 0.05)',
+      sectorActiveFill: 'rgba(255, 255, 255, 0.055)',
+      sectorActiveStroke: 'rgba(255, 255, 255, 0.12)',
+      edge: 'rgba(90, 90, 90, 0.65)',
+      edgeActive: '#4ed252',
+      node: '#444444',
+      nodeActive: '#4ed252',
+      root: '#4ed252',
+      rootStroke: 'rgba(255, 255, 255, 0.18)',
+      leaf: '#4b4b4b',
+      label: '#ffffff',
+      tooltip: 'rgba(8, 8, 8, 0.96)',
+      tooltipText: '#ffffff',
+      contributionPositive: '#4ed252',
+      contributionNegative: '#5ea0ff',
+      gaugeTrack: '#3d3d3d',
+      gaugeNeedle: '#ff4d4d',
+      gaugeText: '#ffffff',
+      gaugeHub: '#ff4d4d',
+    }
+  }
+
+  return {
+    gradientInner: 'rgba(255,255,255,0.9)',
+    gradientOuter: 'rgba(240, 235, 226, 0.42)',
+    sectorFill: 'rgba(255, 255, 255, 0.28)',
+    sectorStroke: 'rgba(27, 30, 29, 0.04)',
+    sectorActiveFill: 'rgba(255, 255, 255, 0.4)',
+    sectorActiveStroke: 'rgba(27, 30, 29, 0.12)',
+    edge: 'rgba(27, 30, 29, 0.2)',
+    edgeActive: '#111111',
+    node: 'rgba(27, 30, 29, 0.18)',
+    nodeActive: 'rgba(27, 30, 29, 0.9)',
+    root: '#111111',
+    rootStroke: 'rgba(255, 255, 255, 0.95)',
+    leaf: 'rgba(27, 30, 29, 0.3)',
+    label: '#5f655e',
+    tooltip: 'rgba(27, 30, 29, 0.92)',
+    tooltipText: '#ffffff',
+    contributionPositive: '#da5838',
+    contributionNegative: '#22817e',
+    gaugeTrack: '#d6d1c8',
+    gaugeNeedle: '#111111',
+    gaugeText: '#1b1e1d',
+    gaugeHub: '#111111',
+  }
 }
 
 function sectorPath(start: number, end: number, innerRadius: number, outerRadius: number) {
@@ -64,47 +137,106 @@ function treeLabelIndices(numTrees: number) {
 export function RadialTreeView({
   trees,
   treeResults,
+  probability,
+  panelScale,
+  onPanelScaleChange,
   hoveredTreeIndex,
   onHoverTree,
 }: RadialTreeViewProps) {
   const [tooltip, setTooltip] = useState<{ treeIndex: number; x: number; y: number } | null>(null)
+  const [isDarkMode, setIsDarkMode] = useState(false)
   const treeResultMap = new Map(treeResults.map((result) => [result.tree_index, result]))
   const maxAbsContribution = Math.max(...treeResults.map((result) => Math.abs(result.contribution)), 0)
   const visibleTreeLabels = useMemo(
     () => treeLabelIndices(trees.length).map((treeIndex) => trees[treeIndex]).filter(Boolean),
     [trees],
   )
+  const theme = radialTheme(isDarkMode)
+  const gaugeValue = probability ?? 0
+  const gaugeAngle = gaugeNeedleAngle(gaugeValue)
 
   return (
-    <section className="panel radial-panel">
-      <div className="panel-header">
-        <h2>Radial Tree Layout</h2>
-        <span className="panel-caption">
-          Static skeleton geometry with dynamic path and contribution overlays
-        </span>
-      </div>
+    <div className="radial-panel-shell">
+      <section
+        className="panel radial-panel"
+        style={{
+          width: `${panelScale * 100}%`,
+        }}
+      >
+        <div className="panel-header">
+          <h2>Radial Tree Layout</h2>
+          <span className="panel-caption">
+            Static skeleton geometry with dynamic path and contribution overlays
+          </span>
+        </div>
 
-      {trees.length ? (
-        <div className="radial-shell">
-          <svg className="radial-svg" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`} role="img">
-            <defs>
-              <radialGradient id="centerGlow" cx="50%" cy="50%" r="70%">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.8)" />
-                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-              </radialGradient>
-            </defs>
+        {trees.length ? (
+          <div className={isDarkMode ? 'radial-shell dark' : 'radial-shell'}>
+            <div className="radial-gauge-card" aria-label="Predicted probability gauge">
+              <svg className="radial-gauge" viewBox={`0 0 ${GAUGE_SIZE} ${GAUGE_SIZE}`} role="img">
+                <path d={gaugeArcPath(GAUGE_RADIUS)} className="gauge-track" style={{ stroke: theme.gaugeTrack }} />
+                <g
+                  className="gauge-needle"
+                  style={{
+                    transform: `rotate(${gaugeAngle}deg)`,
+                    transformOrigin: `${GAUGE_CENTER}px ${GAUGE_CENTER}px`,
+                  }}
+                >
+                  <line
+                    x1={GAUGE_CENTER}
+                    y1={GAUGE_CENTER}
+                    x2={GAUGE_CENTER + GAUGE_RADIUS - 8}
+                    y2={GAUGE_CENTER}
+                    stroke={theme.gaugeNeedle}
+                    strokeWidth={3.2}
+                    strokeLinecap="round"
+                  />
+                </g>
+                <circle cx={GAUGE_CENTER} cy={GAUGE_CENTER} r={4.5} fill={theme.gaugeHub} />
+                <text
+                  x={GAUGE_CENTER}
+                  y={GAUGE_CENTER + 22}
+                  textAnchor="middle"
+                  className="gauge-value"
+                  fill={theme.gaugeText}
+                >
+                  {gaugeValue.toFixed(2)}
+                </text>
+              </svg>
+            </div>
 
-            <circle cx={CENTER} cy={CENTER} r={CENTER - 24} fill="url(#centerGlow)" />
+            <button
+              type="button"
+              className="radial-mode-toggle"
+              onClick={() => setIsDarkMode((current) => !current)}
+            >
+              {isDarkMode ? 'Light' : 'Dark'}
+            </button>
 
-            {trees.map((tree) => (
-              <path
-                key={`sector-${tree.tree_index}`}
-                d={sectorPath(tree.sector_start_angle, tree.sector_end_angle, SCALE * 0.06, SCALE * 1.02)}
-                className={hoveredTreeIndex === tree.tree_index ? 'sector-fill active' : 'sector-fill'}
-              />
-            ))}
+            <div className="radial-svg-stage">
+              <svg className="radial-svg" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`} role="img">
+              <defs>
+                <radialGradient id="centerGlow" cx="50%" cy="50%" r="70%">
+                  <stop offset="0%" stopColor={theme.gradientInner} />
+                  <stop offset="100%" stopColor={theme.gradientOuter} />
+                </radialGradient>
+              </defs>
 
-            {trees.map((tree) => {
+              <circle cx={CENTER} cy={CENTER} r={CENTER - 24} fill="url(#centerGlow)" />
+
+              {trees.map((tree) => (
+                <path
+                  key={`sector-${tree.tree_index}`}
+                  d={sectorPath(tree.sector_start_angle, tree.sector_end_angle, SCALE * 0.06, SCALE * 1.02)}
+                  className={hoveredTreeIndex === tree.tree_index ? 'sector-fill active' : 'sector-fill'}
+                  style={{
+                    fill: hoveredTreeIndex === tree.tree_index ? theme.sectorActiveFill : theme.sectorFill,
+                    stroke: hoveredTreeIndex === tree.tree_index ? theme.sectorActiveStroke : theme.sectorStroke,
+                  }}
+                />
+              ))}
+
+              {trees.map((tree) => {
               const treeResult = treeResultMap.get(tree.tree_index)
               const contribution = treeResult?.contribution ?? 0
               const overlayAlpha = contributionIntensity(contribution, maxAbsContribution) * 0.85
@@ -113,7 +245,11 @@ export function RadialTreeView({
                 <path
                   key={`arc-${tree.tree_index}`}
                   d={contributionArc(tree.sector_start_angle + 0.01, tree.sector_end_angle - 0.01, SCALE * 1.08)}
-                  stroke={contributionColor(contribution, isHovered ? 1 : overlayAlpha)}
+                  stroke={
+                    contribution >= 0
+                      ? `rgba(${isDarkMode ? '255, 77, 77' : '218, 88, 56'}, ${isHovered ? 1 : overlayAlpha})`
+                      : `rgba(${isDarkMode ? '94, 160, 255' : '34, 129, 126'}, ${isHovered ? 1 : overlayAlpha})`
+                  }
                   strokeWidth={isHovered ? 18 : 14}
                   strokeLinecap="round"
                   fill="none"
@@ -131,9 +267,9 @@ export function RadialTreeView({
                   }}
                 />
               )
-            })}
+              })}
 
-            {trees.map((tree) => {
+              {trees.map((tree) => {
               const rootNodeId = tree.nodes.find((node) => node.depth === 0)?.node_id
               const pointMap = new Map<number, { x: number; y: number }>()
               tree.nodes.forEach((node) => {
@@ -184,6 +320,10 @@ export function RadialTreeView({
                         x2={target.x}
                         y2={target.y}
                         className={highlighted ? 'edge-line active' : 'edge-line'}
+                        style={{
+                          stroke: highlighted ? theme.edgeActive : theme.edge,
+                          strokeWidth: highlighted && !isDarkMode ? 2.1 : 1.4,
+                        }}
                       />
                     )
                   })}
@@ -199,6 +339,7 @@ export function RadialTreeView({
                           cy={CENTER + node.y * SCALE}
                           r={3.25}
                           className={highlighted ? 'tree-node active' : 'tree-node'}
+                          style={{ fill: highlighted ? theme.nodeActive : theme.node }}
                         />
                       )
                     })}
@@ -213,17 +354,31 @@ export function RadialTreeView({
                         cy={CENTER + leaf.y * SCALE}
                         r={highlighted ? 5.5 : 3.5}
                         className={highlighted ? 'tree-leaf active' : 'tree-leaf'}
-                        fill={highlighted ? contributionColor(treeResult?.contribution ?? 0, 1) : undefined}
+                        fill={
+                          highlighted
+                            ? isDarkMode
+                              ? theme.nodeActive
+                              : treeResult && treeResult.contribution < 0
+                                ? theme.contributionNegative
+                                : theme.contributionPositive
+                            : theme.leaf
+                        }
                       />
                     )
                   })}
                 </g>
               )
-            })}
+              })}
 
-            <circle cx={CENTER} cy={CENTER} r={6.5} className="shared-root-node" />
+              <circle
+                cx={CENTER}
+                cy={CENTER}
+                r={6.5}
+                className="shared-root-node"
+                style={{ fill: theme.root, stroke: theme.rootStroke }}
+              />
 
-            {visibleTreeLabels.map((tree) => {
+              {visibleTreeLabels.map((tree) => {
               const midAngle = (tree.sector_start_angle + tree.sector_end_angle) * 0.5
               const labelRadius = SCALE * 1.18
               const labelX = CENTER + Math.cos(midAngle) * labelRadius
@@ -236,27 +391,54 @@ export function RadialTreeView({
                   textAnchor="middle"
                   dominantBaseline="middle"
                   className="tree-index-label"
+                  fill={theme.label}
                 >
                   {tree.tree_index}
                 </text>
               )
-            })}
-          </svg>
-          {tooltip ? (
+              })}
+              </svg>
+            </div>
+            {tooltip ? (
             <div
               className="radial-tooltip"
               style={{
-                left: tooltip.x + 6,
-                top: tooltip.y + 6,
+                left: tooltip.x,
+                top: tooltip.y,
+                background: theme.tooltip,
+                color: theme.tooltipText,
               }}
-            >
-              {`Tree ${tooltip.treeIndex}`}
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <div className="empty-state">Upload a model to compute static radial geometry.</div>
-      )}
-    </section>
+              >
+                {`Tree ${tooltip.treeIndex}`}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="empty-state">Upload a model to compute static radial geometry.</div>
+        )}
+      </section>
+
+      <div
+        className="radial-scale-control"
+        style={{
+          width: `${panelScale * 100}%`,
+        }}
+      >
+        <label className="radial-scale-label" htmlFor="radial-scale-slider">
+          Panel Size
+        </label>
+        <input
+          id="radial-scale-slider"
+          className="radial-scale-slider"
+          type="range"
+          min={1 / 3}
+          max={1}
+          step={0.01}
+          value={panelScale}
+          onChange={(event) => onPanelScaleChange(Number(event.target.value))}
+        />
+        <span className="radial-scale-value">{`${Math.round(panelScale * 100)}%`}</span>
+      </div>
+    </div>
   )
 }

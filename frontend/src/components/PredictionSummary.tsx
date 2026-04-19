@@ -1,11 +1,8 @@
 import type { PredictionSummary as PredictionSummaryType, TreePredictionResult } from '../types/api'
-import { TreeContributionChart } from './TreeContributionChart'
 
 type PredictionSummaryProps = {
   prediction: PredictionSummaryType | null
   treeResults: TreePredictionResult[]
-  hoveredTreeIndex: number | null
-  onHoverTree: (treeIndex: number | null) => void
 }
 
 const MARGIN_EXPLANATION =
@@ -17,8 +14,6 @@ const TREES_EXPLANATION =
 export function PredictionSummary({
   prediction,
   treeResults,
-  hoveredTreeIndex,
-  onHoverTree,
 }: PredictionSummaryProps) {
   return (
     <section className="panel prediction-panel">
@@ -49,11 +44,6 @@ export function PredictionSummary({
               <strong>{treeResults.length}</strong>
             </div>
           </div>
-          <TreeContributionChart
-            treeResults={treeResults}
-            hoveredTreeIndex={hoveredTreeIndex}
-            onHoverTree={onHoverTree}
-          />
         </>
       ) : (
         <div className="empty-state">Load a model to compute margin and probability.</div>
