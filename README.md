@@ -85,12 +85,6 @@ npm install
 npm run dev
 ```
 
-The frontend reads `VITE_API_BASE_URL` from the environment. For local development you can leave it unset if you proxy API requests through the same origin, or point it at your backend explicitly:
-
-```bash
-VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev
-```
-
 ## Deploying On Render
 
 This repository is configured for Render with [render.yaml](./render.yaml).
@@ -127,16 +121,6 @@ npm install && npm run build
 ```bash
 frontend/dist
 ```
-
-### Required Render environment variable
-
-Set this on the frontend Render service after the backend URL is known:
-
-```bash
-VITE_API_BASE_URL=https://<your-backend-service>.onrender.com
-```
-
-If you create services from the blueprint, Render will prompt you to fill this value because it is marked with `sync: false`.
 
 ### Usage
 
