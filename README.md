@@ -96,8 +96,8 @@ This repository is configured for Render with [render.yaml](./render.yaml).
 
 It deploys as two services:
 
-1. `lgbm-visual-backend` as a Python web service
-2. `lgbm-visual-frontend` as a static site
+1. `gbt-visualizer-backend` as a Python web service
+2. `gbt-visualizer-frontend` as a static site
 
 ### Backend service
 

@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: lgbm-visual-backend
+    name: gbt-visualizer-backend
     runtime: python
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
 
   - type: web
-    name: lgbm-visual-frontend
+    name: gbt-visualizer-frontend
     runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: frontend/dist
