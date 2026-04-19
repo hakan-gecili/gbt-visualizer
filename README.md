@@ -2,6 +2,7 @@
 
 An interactive web application for exploring and understanding Gradient Boosted Decision Tree models (LightGBM) at both the tree and ensemble level.
 
+Live Demo: https://gbt-visualizer-frontend.onrender.com/
 ---
 
 ## 🎥 Demo
