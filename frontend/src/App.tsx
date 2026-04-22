@@ -6,6 +6,7 @@ import { ExamplesPanel } from './components/ExamplesPanel'
 import { FeatureControlPanel } from './components/FeatureControlPanel'
 import { PredictionSummary } from './components/PredictionSummary'
 import { RadialTreeView } from './components/RadialTreeView'
+import { SelectedTreePanel } from './components/SelectedTreePanel'
 import { UploadPanel } from './components/UploadPanel'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { fetchExamples, fetchLayout, loadExample, predict, selectDatasetRow, uploadDataset, uploadFeatureSchema, uploadModel } from './services/model'
@@ -44,6 +45,7 @@ function App() {
   const [treeResults, setTreeResults] = useState<TreePredictionResult[]>([])
   const [panelScale, setPanelScale] = useState(1)
   const [hoveredTreeIndex, setHoveredTreeIndex] = useState<number | null>(null)
+  const [selectedTreeIndex, setSelectedTreeIndex] = useState<number | null>(null)
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -108,6 +110,7 @@ function App() {
       setFeatureMetadata(modelResponse.feature_metadata)
       setFeatureVector(nextFeatureVector)
       setLayoutTrees(layoutResponse.layout.trees)
+      setSelectedTreeIndex(layoutResponse.layout.trees[0]?.tree_index ?? null)
       setDatasetPreview(null)
       setDatasetSummary(null)
       setPrediction(null)
@@ -191,6 +194,7 @@ function App() {
       setFeatureMetadata(response.feature_metadata)
       setFeatureVector(nextFeatureVector)
       setLayoutTrees(layoutResponse.layout.trees)
+      setSelectedTreeIndex(layoutResponse.layout.trees[0]?.tree_index ?? null)
       setDatasetPreview(response.preview)
       setDatasetSummary(response.dataset_summary)
       setPrediction(null)
@@ -285,6 +289,13 @@ function App() {
           onPanelScaleChange={setPanelScale}
           hoveredTreeIndex={hoveredTreeIndex}
           onHoverTree={setHoveredTreeIndex}
+          selectedTreeIndex={selectedTreeIndex}
+          onSelectTree={setSelectedTreeIndex}
+        />
+        <SelectedTreePanel
+          trees={layoutTrees}
+          treeResults={treeResults}
+          selectedTreeIndex={selectedTreeIndex}
         />
         <DatasetTable
           preview={datasetPreview}

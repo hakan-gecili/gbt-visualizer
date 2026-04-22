@@ -74,7 +74,8 @@ table {
 .control-panel,
 .prediction-panel,
 .dataset-panel,
-.radial-panel {
+ .radial-panel,
+ .selected-tree-panel {
   padding: 22px;
 }
 
@@ -721,9 +722,176 @@ h2 {
   stroke: rgba(27, 30, 29, 0.12);
 }
 
+.sector-fill,
+.tree-index-label,
+.chart-bar {
+  cursor: pointer;
+}
+
 .edge-line {
   stroke: rgba(27, 30, 29, 0.2);
   stroke-width: 1.4;
+}
+
+.selected-tree-panel {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+  height: 470px;
+  min-height: 470px;
+  overflow: hidden;
+}
+
+.selected-tree-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  text-align: right;
+}
+
+.selected-tree-summary strong {
+  font-size: 1rem;
+}
+
+.selected-tree-summary span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.selected-tree-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 8px;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.selected-tree-shell {
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  border-radius: 22px;
+  border: 1px solid rgba(27, 30, 29, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+}
+
+.selected-tree-svg {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: block;
+}
+
+.selected-tree-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  min-height: 34px;
+  position: relative;
+  z-index: 1;
+}
+
+.selected-tree-control {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(27, 30, 29, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.selected-tree-control.compact {
+  padding: 6px 10px;
+  min-height: 34px;
+}
+
+.selected-tree-control span,
+.selected-tree-control strong {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.selected-tree-control input {
+  width: 100%;
+  min-width: 0;
+  display: block;
+  height: 14px;
+  accent-color: var(--accent);
+}
+
+.selected-tree-side-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  border: 1px solid rgba(27, 30, 29, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+  padding: 8px 0;
+  overflow: hidden;
+}
+
+.selected-tree-side-control input {
+  width: 260px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.detail-edge {
+  stroke: rgba(27, 30, 29, 0.18);
+  stroke-width: 2;
+}
+
+.detail-edge.active {
+  stroke: var(--accent);
+  stroke-width: 4;
+}
+
+.detail-node {
+  fill: rgba(27, 30, 29, 0.18);
+  stroke: rgba(255, 255, 255, 0.88);
+  stroke-width: 2.5;
+}
+
+.detail-node.active {
+  fill: var(--ink);
+}
+
+.detail-leaf {
+  fill: rgba(27, 30, 29, 0.3);
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 2;
+}
+
+.detail-leaf.active {
+  fill: var(--cool);
+  stroke: rgba(34, 129, 126, 0.25);
+  stroke-width: 4;
+}
+
+.detail-node-label,
+.detail-threshold-label,
+.detail-leaf-label {
+  fill: var(--ink);
+  font-size: 12px;
+}
+
+.detail-node-label {
+  font-weight: 600;
+}
+
+.detail-threshold-label,
+.detail-leaf-label {
+  fill: var(--muted);
 }
 
 .edge-line.active {
@@ -866,6 +1034,33 @@ tbody tr.selected {
   .status-bar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .selected-tree-summary {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .selected-tree-panel {
+    height: 400px;
+    min-height: 400px;
+  }
+
+  .selected-tree-workspace {
+    grid-template-columns: minmax(0, 1fr) 24px;
+    gap: 6px;
+  }
+
+  .selected-tree-shell {
+    min-height: 0;
+  }
+
+  .selected-tree-svg {
+    min-height: 0;
+  }
+
+  .selected-tree-controls {
+    min-height: 34px;
   }
 
   .stat-grid {
