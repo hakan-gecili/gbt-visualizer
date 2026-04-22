@@ -6,8 +6,10 @@ import type {
   LoadExampleResponse,
   ModelUploadResponse,
   PredictResponse,
+  SchemaUploadResponse,
   SelectRowResponse,
   SessionMetadataResponse,
+  FeatureValue,
 } from '../types/api'
 
 export function uploadModel(modelFile: File) {
@@ -35,6 +37,16 @@ export function uploadDataset(sessionId: string, dataFile: File) {
   })
 }
 
+export function uploadFeatureSchema(sessionId: string, schemaFile: File) {
+  return apiFetch<SchemaUploadResponse>('/api/schema/upload', {
+    method: 'POST',
+    body: createFormData({
+      session_id: sessionId,
+      schema_file: schemaFile,
+    }),
+  })
+}
+
 export function fetchExamples() {
   return apiFetch<ExamplesListResponse>('/api/examples')
 }
@@ -45,7 +57,7 @@ export function loadExample(exampleName: string) {
   })
 }
 
-export function predict(sessionId: string, featureVector: Record<string, number>) {
+export function predict(sessionId: string, featureVector: Record<string, FeatureValue>) {
   return apiFetch<PredictResponse>('/api/predict', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

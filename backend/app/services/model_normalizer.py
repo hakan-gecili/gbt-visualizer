@@ -11,6 +11,7 @@ from app.domain.model_types import (
     RadialLayoutConfig,
     compute_model_radial_layout,
 )
+from app.services.feature_schema_service import build_feature_metadata
 
 
 class LightGBMModelNormalizationError(ValueError):
@@ -71,7 +72,10 @@ def normalize_tree(tree_info: Dict[str, Any], feature_names: list[str]) -> Norma
             node_id=object_id,
             depth=depth,
             split_feature=feature_names[split_feature_index],
-            threshold=float(node_payload["threshold"]),
+            threshold=str(node_payload["threshold"]),
+            decision_type=str(node_payload.get("decision_type", "<=")),
+            default_left=bool(node_payload.get("default_left", True)),
+            missing_type=str(node_payload.get("missing_type", "None")),
             left_child_id=left_child_id,
             right_child_id=right_child_id,
         )
@@ -79,26 +83,7 @@ def normalize_tree(tree_info: Dict[str, Any], feature_names: list[str]) -> Norma
 
     tree.root_id = _walk(tree_info["tree_structure"], 0)
     return tree
-
-
-def build_feature_metadata(feature_names: list[str]) -> list[dict[str, Any]]:
-    metadata = []
-    for feature_name in feature_names:
-        metadata.append(
-            {
-                "name": feature_name,
-                "short_name": feature_name[:10],
-                "type": "numeric",
-                "min_value": None,
-                "max_value": None,
-                "default_value": 0.0,
-            }
-        )
-    return metadata
-
-
 def summarize_layout(model: NormalizedModel) -> Tuple[int, int]:
     max_tree_depth = max((tree.max_depth for tree in model.trees), default=0)
     total_leaves = sum(tree.num_leaves for tree in model.trees)
     return max_tree_depth, total_leaves
-

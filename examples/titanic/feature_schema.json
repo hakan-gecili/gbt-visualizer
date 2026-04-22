@@ -1,0 +1,103 @@
+{
+  "target_column": "survived",
+  "features": [
+    {
+      "name": "age",
+      "type": "numeric",
+      "missing_allowed": true,
+      "min_value": 0.42,
+      "max_value": 80.0,
+      "default_value": 28.0
+    },
+    {
+      "name": "fare",
+      "type": "numeric",
+      "missing_allowed": true,
+      "min_value": 0.0,
+      "max_value": 512.3292,
+      "default_value": 14.4542
+    },
+    {
+      "name": "sex",
+      "type": "binary",
+      "missing_allowed": true,
+      "default_value": "female",
+      "options": [
+        {
+          "value": "female",
+          "label": "Female",
+          "encoded_value": 0
+        },
+        {
+          "value": "male",
+          "label": "Male",
+          "encoded_value": 1
+        }
+      ]
+    },
+    {
+      "name": "class",
+      "type": "categorical",
+      "missing_allowed": true,
+      "default_value": "First",
+      "options": [
+        {
+          "value": "First",
+          "label": "First",
+          "encoded_value": 0
+        },
+        {
+          "value": "Second",
+          "label": "Second",
+          "encoded_value": 1
+        },
+        {
+          "value": "Third",
+          "label": "Third",
+          "encoded_value": 2
+        }
+      ]
+    },
+    {
+      "name": "embark_town",
+      "type": "categorical",
+      "missing_allowed": true,
+      "default_value": "Cherbourg",
+      "options": [
+        {
+          "value": "Cherbourg",
+          "label": "Cherbourg",
+          "encoded_value": 0
+        },
+        {
+          "value": "Queenstown",
+          "label": "Queenstown",
+          "encoded_value": 1
+        },
+        {
+          "value": "Southampton",
+          "label": "Southampton",
+          "encoded_value": 2
+        }
+      ]
+    },
+    {
+      "name": "alone",
+      "type": "binary",
+      "missing_allowed": true,
+      "default_value": "False",
+      "options": [
+        {
+          "value": "False",
+          "label": "False",
+          "encoded_value": 0
+        },
+        {
+          "value": "True",
+          "label": "True",
+          "encoded_value": 1
+        }
+      ]
+    }
+  ]
+}

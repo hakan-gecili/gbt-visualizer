@@ -1,0 +1,313 @@
+{
+  "features": [
+    {
+      "name": "age",
+      "short_name": "age",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 18.0,
+      "max_value": 95.0,
+      "default_value": 39.0,
+      "options": []
+    },
+    {
+      "name": "balance",
+      "short_name": "balance",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -8019.0,
+      "max_value": 102127.0,
+      "default_value": 448.0,
+      "options": []
+    },
+    {
+      "name": "campaign",
+      "short_name": "campaign",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 1.0,
+      "max_value": 63.0,
+      "default_value": 2.0,
+      "options": []
+    },
+    {
+      "name": "contact",
+      "short_name": "contact",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "cellular",
+      "options": [
+        {
+          "value": "cellular",
+          "label": "cellular",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "telephone",
+          "label": "telephone",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "unknown",
+          "label": "unknown",
+          "encoded_value": 2.0
+        }
+      ]
+    },
+    {
+      "name": "default",
+      "short_name": "default",
+      "type": "binary",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "no",
+      "options": [
+        {
+          "value": "no",
+          "label": "no",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "yes",
+          "label": "yes",
+          "encoded_value": 1.0
+        }
+      ]
+    },
+    {
+      "name": "duration",
+      "short_name": "duration",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 4918.0,
+      "default_value": 180.0,
+      "options": []
+    },
+    {
+      "name": "education",
+      "short_name": "education",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "secondary",
+      "options": [
+        {
+          "value": "primary",
+          "label": "primary",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "secondary",
+          "label": "secondary",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "tertiary",
+          "label": "tertiary",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "unknown",
+          "label": "unknown",
+          "encoded_value": 3.0
+        }
+      ]
+    },
+    {
+      "name": "housing",
+      "short_name": "housing",
+      "type": "binary",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "yes",
+      "options": [
+        {
+          "value": "no",
+          "label": "no",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "yes",
+          "label": "yes",
+          "encoded_value": 1.0
+        }
+      ]
+    },
+    {
+      "name": "job",
+      "short_name": "job",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "blue-collar",
+      "options": [
+        {
+          "value": "admin.",
+          "label": "admin.",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "blue-collar",
+          "label": "blue-collar",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "entrepreneur",
+          "label": "entrepreneur",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "housemaid",
+          "label": "housemaid",
+          "encoded_value": 3.0
+        },
+        {
+          "value": "management",
+          "label": "management",
+          "encoded_value": 4.0
+        },
+        {
+          "value": "retired",
+          "label": "retired",
+          "encoded_value": 5.0
+        },
+        {
+          "value": "self-employed",
+          "label": "self-employed",
+          "encoded_value": 6.0
+        },
+        {
+          "value": "services",
+          "label": "services",
+          "encoded_value": 7.0
+        },
+        {
+          "value": "student",
+          "label": "student",
+          "encoded_value": 8.0
+        },
+        {
+          "value": "technician",
+          "label": "technician",
+          "encoded_value": 9.0
+        },
+        {
+          "value": "unemployed",
+          "label": "unemployed",
+          "encoded_value": 10.0
+        },
+        {
+          "value": "unknown",
+          "label": "unknown",
+          "encoded_value": 11.0
+        }
+      ]
+    },
+    {
+      "name": "loan",
+      "short_name": "loan",
+      "type": "binary",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "no",
+      "options": [
+        {
+          "value": "no",
+          "label": "no",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "yes",
+          "label": "yes",
+          "encoded_value": 1.0
+        }
+      ]
+    },
+    {
+      "name": "marital",
+      "short_name": "marital",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "married",
+      "options": [
+        {
+          "value": "divorced",
+          "label": "divorced",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "married",
+          "label": "married",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "single",
+          "label": "single",
+          "encoded_value": 2.0
+        }
+      ]
+    },
+    {
+      "name": "pdays",
+      "short_name": "pdays",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -1.0,
+      "max_value": 871.0,
+      "default_value": -1.0,
+      "options": []
+    },
+    {
+      "name": "poutcome",
+      "short_name": "poutcome",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "unknown",
+      "options": [
+        {
+          "value": "failure",
+          "label": "failure",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "other",
+          "label": "other",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "success",
+          "label": "success",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "unknown",
+          "label": "unknown",
+          "encoded_value": 3.0
+        }
+      ]
+    },
+    {
+      "name": "previous",
+      "short_name": "previous",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 275.0,
+      "default_value": 0.0,
+      "options": []
+    }
+  ],
+  "target_column": "y"
+}

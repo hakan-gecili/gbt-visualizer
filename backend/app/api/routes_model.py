@@ -8,11 +8,8 @@ from app.core.session_store import session_store
 from app.domain.session_types import SessionState
 from app.schemas.responses import ModelUploadResponse
 from app.services.model_loader import load_normalized_model
-from app.services.model_normalizer import (
-    LightGBMModelNormalizationError,
-    build_feature_metadata,
-    summarize_layout,
-)
+from app.services.feature_schema_service import build_feature_metadata
+from app.services.model_normalizer import LightGBMModelNormalizationError, summarize_layout
 
 router = APIRouter(prefix="/api/model", tags=["model"])
 logger = logging.getLogger(__name__)

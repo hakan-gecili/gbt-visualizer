@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api", tags=["predict"])
 async def predict(request: PredictRequest) -> PredictResponse:
     try:
         session = session_store.get(request.session_id)
-        _, prediction_result = predict_model(session.model, request.feature_vector)
+        _, prediction_result = predict_model(session.model, session.feature_metadata, request.feature_vector)
         return PredictResponse(
             prediction={
                 "margin": prediction_result.margin,
@@ -36,4 +36,3 @@ async def predict(request: PredictRequest) -> PredictResponse:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Prediction failed: {exc}") from exc
-

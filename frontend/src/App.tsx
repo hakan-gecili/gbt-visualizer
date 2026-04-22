@@ -8,10 +8,11 @@ import { PredictionSummary } from './components/PredictionSummary'
 import { RadialTreeView } from './components/RadialTreeView'
 import { UploadPanel } from './components/UploadPanel'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
-import { fetchExamples, fetchLayout, loadExample, predict, selectDatasetRow, uploadDataset, uploadModel } from './services/model'
+import { fetchExamples, fetchLayout, loadExample, predict, selectDatasetRow, uploadDataset, uploadFeatureSchema, uploadModel } from './services/model'
 import type {
   DatasetSummary,
   FeatureMetadata,
+  FeatureValue,
   PredictionSummary as PredictionSummaryType,
   PreviewPayload,
   TreeLayout,
@@ -21,10 +22,10 @@ import type {
 function buildDefaultFeatureVector(featureMetadata: FeatureMetadata[]) {
   return Object.fromEntries(
     featureMetadata.map((feature) => [feature.name, feature.default_value ?? 0]),
-  ) as Record<string, number>
+  ) as Record<string, FeatureValue>
 }
 
-function serializeFeatureVector(featureVector: Record<string, number>) {
+function serializeFeatureVector(featureVector: Record<string, FeatureValue>) {
   return JSON.stringify(
     Object.entries(featureVector).sort(([left], [right]) => left.localeCompare(right)),
   )
@@ -35,7 +36,7 @@ function App() {
   const [availableExamples, setAvailableExamples] = useState<string[]>([])
   const [selectedExample, setSelectedExample] = useState('')
   const [featureMetadata, setFeatureMetadata] = useState<FeatureMetadata[]>([])
-  const [featureVector, setFeatureVector] = useState<Record<string, number>>({})
+  const [featureVector, setFeatureVector] = useState<Record<string, FeatureValue>>({})
   const [layoutTrees, setLayoutTrees] = useState<TreeLayout[]>([])
   const [datasetPreview, setDatasetPreview] = useState<PreviewPayload | null>(null)
   const [datasetSummary, setDatasetSummary] = useState<DatasetSummary | null>(null)
@@ -147,6 +148,31 @@ function App() {
     }
   }
 
+  async function handleSchemaUpload(file: File) {
+    if (!sessionId) {
+      return
+    }
+
+    setBusy(true)
+    setErrorMessage(null)
+
+    try {
+      const response = await uploadFeatureSchema(sessionId, file)
+      setFeatureMetadata(response.feature_metadata)
+      setDatasetSummary(response.dataset_summary)
+      setDatasetPreview(response.preview)
+      const nextFeatureVector = buildDefaultFeatureVector(response.feature_metadata)
+      setFeatureVector(nextFeatureVector)
+      setSelectedRowIndex(null)
+      setHoveredTreeIndex(null)
+      appliedFeatureVectorKeyRef.current = ''
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Feature schema upload failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function handleExampleSelect(exampleName: string) {
     setSelectedExample(exampleName)
     if (!exampleName) {
@@ -207,12 +233,12 @@ function App() {
     }
   }
 
-  function handleFeatureChange(featureName: string, value: number) {
+  function handleFeatureChange(featureName: string, value: FeatureValue) {
     setSelectedRowIndex(null)
     setHoveredTreeIndex(null)
     setFeatureVector((current) => ({
       ...current,
-      [featureName]: Number.isFinite(value) ? value : 0,
+      [featureName]: value,
     }))
   }
 
@@ -224,6 +250,7 @@ function App() {
           busy={busy}
           onModelUpload={handleModelUpload}
           onDatasetUpload={handleDatasetUpload}
+          onSchemaUpload={handleSchemaUpload}
         />
         <ExamplesPanel
           examples={availableExamples}

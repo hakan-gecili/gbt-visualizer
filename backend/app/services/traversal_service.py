@@ -1,20 +1,26 @@
 from __future__ import annotations
 
 import math
-from typing import Dict
 
-from app.domain.model_types import NormalizedModel, NormalizedTree, TraversalResult, get_object
-
-
-def prepare_feature_vector(model: NormalizedModel, feature_vector: Dict[str, float]) -> Dict[str, float]:
-    prepared = {feature_name: 0.0 for feature_name in model.feature_names}
-    for key, value in feature_vector.items():
-        if key in prepared:
-            prepared[key] = float(value)
-    return prepared
+from app.domain.model_types import NormalizedTree, TraversalResult, get_object
 
 
-def traverse_tree(tree: NormalizedTree, feature_vector: Dict[str, float]) -> TraversalResult:
+def _is_missing_branch(feature_value: float, missing_type: str) -> bool:
+    if math.isnan(feature_value):
+        return True
+    return missing_type.lower() == "zero" and feature_value == 0.0
+
+
+def _take_left_branch(feature_value: float, decision_type: str, threshold: str) -> bool:
+    if decision_type == "<=":
+        return feature_value <= float(threshold)
+    if decision_type == "==":
+        accepted_values = {float(item) for item in threshold.split("||") if item != ""}
+        return feature_value in accepted_values
+    raise ValueError(f"Unsupported LightGBM decision_type '{decision_type}'.")
+
+
+def traverse_tree(tree: NormalizedTree, feature_vector: dict[str, float]) -> TraversalResult:
     current_id = tree.root_id
     path_node_ids: list[int] = []
 
@@ -29,9 +35,13 @@ def traverse_tree(tree: NormalizedTree, feature_vector: Dict[str, float]) -> Tra
             )
 
         path_node_ids.append(obj.node_id)
-        feature_value = feature_vector.get(obj.split_feature, 0.0)
-        if math.isnan(feature_value) or feature_value <= obj.threshold:
-            current_id = obj.left_child_id
-        else:
-            current_id = obj.right_child_id
+        feature_value = feature_vector.get(obj.split_feature, math.nan)
+        if _is_missing_branch(feature_value, obj.missing_type):
+            current_id = obj.left_child_id if obj.default_left else obj.right_child_id
+            continue
 
+        if _take_left_branch(feature_value, obj.decision_type, obj.threshold):
+            current_id = obj.left_child_id
+            continue
+
+        current_id = obj.right_child_id

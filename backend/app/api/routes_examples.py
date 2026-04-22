@@ -14,12 +14,9 @@ from app.services.dataset_service import (
     load_dataset_from_path,
     summarize_dataset,
 )
+from app.services.feature_schema_service import FeatureSchemaError, build_feature_metadata, parse_feature_schema_json
 from app.services.model_loader import load_normalized_model_from_path
-from app.services.model_normalizer import (
-    LightGBMModelNormalizationError,
-    build_feature_metadata,
-    summarize_layout,
-)
+from app.services.model_normalizer import LightGBMModelNormalizationError, summarize_layout
 
 router = APIRouter(prefix="/api/examples", tags=["examples"])
 logger = logging.getLogger(__name__)
@@ -36,7 +33,7 @@ def _example_directories() -> list[Path]:
     return sorted([path for path in EXAMPLES_ROOT.iterdir() if path.is_dir()], key=lambda path: path.name)
 
 
-def _resolve_example_files(example_name: str) -> tuple[Path, Path]:
+def _resolve_example_files(example_name: str) -> tuple[Path, Path, Path | None]:
     example_dir = EXAMPLES_ROOT / example_name
     if not example_dir.is_dir():
         raise HTTPException(status_code=404, detail=f"Example '{example_name}' was not found.")
@@ -61,7 +58,15 @@ def _resolve_example_files(example_name: str) -> tuple[Path, Path]:
             ),
         )
 
-    return model_files[0], dataset_files[0]
+    schema_path = example_dir / "feature_schema.json"
+    return model_files[0], dataset_files[0], schema_path if schema_path.exists() else None
+
+
+def _load_example_schema(schema_path: Path | None) -> list[dict] | None:
+    if schema_path is None:
+        return None
+    with schema_path.open("r", encoding="utf-8") as handle:
+        return parse_feature_schema_json(handle.read())
 
 
 @router.get("", response_model=ExamplesListResponse)
@@ -82,15 +87,16 @@ async def list_examples() -> ExamplesListResponse:
 @router.post("/{example_name}/load", response_model=LoadExampleResponse)
 async def load_example(example_name: str) -> LoadExampleResponse:
     try:
-        model_path, dataset_path = _resolve_example_files(example_name)
+        model_path, dataset_path, schema_path = _resolve_example_files(example_name)
         logger.info(
-            "Loading example '%s' with model=%s dataset=%s",
+            "Loading example '%s' with model=%s dataset=%s schema=%s",
             example_name,
             model_path,
             dataset_path,
+            schema_path,
         )
         model = load_normalized_model_from_path(str(model_path))
-        feature_metadata = build_feature_metadata(model.feature_names)
+        feature_metadata = build_feature_metadata(model.feature_names, _load_example_schema(schema_path))
         dataframe = load_dataset_from_path(str(dataset_path))
         dataset_summary = summarize_dataset(dataframe, model.feature_names)
         feature_metadata = apply_dataset_ranges(feature_metadata, dataframe)
@@ -128,6 +134,9 @@ async def load_example(example_name: str) -> LoadExampleResponse:
         raise
     except LightGBMModelNormalizationError as exc:
         logger.exception("Example '%s' failed model normalization", example_name)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FeatureSchemaError as exc:
+        logger.exception("Example '%s' failed feature schema validation", example_name)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Example '%s' failed to load", example_name)

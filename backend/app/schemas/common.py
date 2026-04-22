@@ -1,17 +1,28 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel
+
+
+FeatureValue = float | str | None
+
+
+class FeatureOption(BaseModel):
+    value: str
+    label: str
+    encoded_value: float
 
 
 class FeatureMetadata(BaseModel):
     name: str
     short_name: str
-    type: str = "numeric"
+    type: Literal["numeric", "binary", "categorical"] = "numeric"
+    missing_allowed: bool = True
     min_value: Optional[float] = None
     max_value: Optional[float] = None
-    default_value: float = 0.0
+    default_value: FeatureValue = 0.0
+    options: List[FeatureOption] = []
 
 
 class PredictionSummary(BaseModel):
@@ -38,4 +49,3 @@ class LayoutEdge(BaseModel):
 class PreviewPayload(BaseModel):
     columns: List[str]
     rows: List[List[Any]]
-

@@ -50,4 +50,3 @@ def serialize_layout(model: NormalizedModel) -> dict:
             }
         )
     return {"layout": {"trees": trees}}
-

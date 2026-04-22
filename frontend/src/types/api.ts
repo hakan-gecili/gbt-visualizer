@@ -1,10 +1,20 @@
+export type FeatureValue = number | string | null
+
+export type FeatureOption = {
+  value: string
+  label: string
+  encoded_value: number
+}
+
 export type FeatureMetadata = {
   name: string
   short_name: string
-  type: 'numeric'
+  type: 'numeric' | 'binary' | 'categorical'
+  missing_allowed: boolean
   min_value: number | null
   max_value: number | null
-  default_value: number
+  default_value: FeatureValue
+  options: FeatureOption[]
 }
 
 export type ModelSummary = {
@@ -46,6 +56,12 @@ export type DatasetUploadResponse = {
   preview: PreviewPayload
 }
 
+export type SchemaUploadResponse = {
+  dataset_summary: DatasetSummary & { is_loaded: boolean }
+  feature_metadata: FeatureMetadata[]
+  preview: PreviewPayload | null
+}
+
 export type ExamplesListResponse = {
   examples: string[]
 }
@@ -69,7 +85,7 @@ export type TreeLayoutNode = {
   y: number
   is_leaf: false
   split_feature: string
-  threshold: number
+  threshold: number | string
   left_child_id: number
   right_child_id: number
   subtree_leaf_count: number
@@ -131,7 +147,7 @@ export type SelectRowResponse = {
   sample: {
     source: string
     row_index: number
-    feature_vector: Record<string, number>
+    feature_vector: Record<string, FeatureValue>
   }
   prediction: PredictionSummary
   tree_results: TreePredictionResult[]

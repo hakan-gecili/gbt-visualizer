@@ -5,6 +5,7 @@ type UploadPanelProps = {
   busy: boolean
   onModelUpload: (file: File) => Promise<void>
   onDatasetUpload: (file: File) => Promise<void>
+  onSchemaUpload: (file: File) => Promise<void>
 }
 
 export function UploadPanel({
@@ -12,9 +13,11 @@ export function UploadPanel({
   busy,
   onModelUpload,
   onDatasetUpload,
+  onSchemaUpload,
 }: UploadPanelProps) {
   const [modelFile, setModelFile] = useState<File | null>(null)
   const [datasetFile, setDatasetFile] = useState<File | null>(null)
+  const [schemaFile, setSchemaFile] = useState<File | null>(null)
 
   async function handleSubmitModel() {
     if (modelFile) {
@@ -28,6 +31,12 @@ export function UploadPanel({
     }
   }
 
+  async function handleSubmitSchema() {
+    if (schemaFile) {
+      await onSchemaUpload(schemaFile)
+    }
+  }
+
   return (
     <section className="panel upload-panel">
       <div className="eyebrow">Session</div>
@@ -37,30 +46,59 @@ export function UploadPanel({
         updates in raw margin space.
       </p>
 
-      <label className="file-card">
-        <span>Model file</span>
-        <input
-          type="file"
-          accept=".txt,.model,.lgb,.bst"
-          onChange={(event) => setModelFile(event.target.files?.[0] ?? null)}
-        />
-      </label>
-      <button type="button" className="action-button" disabled={!modelFile || busy} onClick={handleSubmitModel}>
-        {busy ? 'Working...' : 'Upload model'}
-      </button>
+      <div className="upload-grid">
+        <div className="upload-card">
+          <label className="file-card">
+            <span>Model File (.txt)</span>
+            <input
+              type="file"
+              accept=".txt,.model,.lgb,.bst"
+              onChange={(event) => setModelFile(event.target.files?.[0] ?? null)}
+            />
+          </label>
+          <button type="button" className="action-button compact-button" disabled={!modelFile || busy} onClick={handleSubmitModel}>
+            {busy ? 'Working...' : 'Upload model'}
+          </button>
+        </div>
 
-      <label className="file-card subtle">
-        <span>Optional CSV dataset</span>
-        <input type="file" accept=".csv,text/csv" onChange={(event) => setDatasetFile(event.target.files?.[0] ?? null)} />
-      </label>
-      <button
-        type="button"
-        className="ghost-button"
-        disabled={!datasetFile || !sessionId || busy}
-        onClick={handleSubmitDataset}
-      >
-        Load dataset
-      </button>
+        <div className="upload-card">
+          <label className="file-card subtle">
+            <span>Dataset File (.csv)</span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => setDatasetFile(event.target.files?.[0] ?? null)}
+            />
+          </label>
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            disabled={!datasetFile || !sessionId || busy}
+            onClick={handleSubmitDataset}
+          >
+            Load dataset
+          </button>
+        </div>
+
+        <div className="upload-card">
+          <label className="file-card subtle">
+            <span>Feature Schema File (.json)</span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={(event) => setSchemaFile(event.target.files?.[0] ?? null)}
+            />
+          </label>
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            disabled={!schemaFile || !sessionId || busy}
+            onClick={handleSubmitSchema}
+          >
+            Upload schema
+          </button>
+        </div>
+      </div>
 
       <div className="session-badge">{sessionId ? `session ${sessionId.slice(0, 8)}` : 'no active session'}</div>
     </section>

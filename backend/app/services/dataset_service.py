@@ -5,6 +5,8 @@ from typing import Any
 import pandas as pd
 from fastapi import UploadFile
 
+from app.services.feature_schema_service import FeatureValue, normalize_feature_value
+
 
 def _python_value(value: Any) -> Any:
     if pd.isna(value):
@@ -70,6 +72,9 @@ def apply_dataset_ranges(feature_metadata: list[dict[str, Any]], dataframe: pd.D
     for item in feature_metadata:
         feature_name = item["name"]
         next_item = dict(item)
+        if next_item.get("type") != "numeric":
+            updated.append(next_item)
+            continue
         dataset_column = column_map.get(_canonicalize_feature_name(feature_name))
         if dataset_column is not None:
             series = pd.to_numeric(dataframe[dataset_column], errors="coerce")
@@ -82,15 +87,23 @@ def apply_dataset_ranges(feature_metadata: list[dict[str, Any]], dataframe: pd.D
     return updated
 
 
-def extract_feature_vector_from_row(dataframe: pd.DataFrame, row_index: int, feature_names: list[str]) -> dict[str, float]:
+def extract_feature_vector_from_row(
+    dataframe: pd.DataFrame,
+    row_index: int,
+    feature_metadata: list[dict[str, Any]],
+) -> dict[str, FeatureValue]:
     if row_index < 0 or row_index >= len(dataframe):
         raise IndexError(f"Row index {row_index} is outside dataset bounds.")
     row = dataframe.iloc[row_index]
     column_map = _dataset_column_map(dataframe)
-    feature_vector: dict[str, float] = {}
-    for feature_name in feature_names:
+    feature_vector: dict[str, FeatureValue] = {}
+    for feature in feature_metadata:
+        feature_name = str(feature["name"])
         dataset_column = column_map.get(_canonicalize_feature_name(feature_name))
-        value = row[dataset_column] if dataset_column is not None else 0.0
-        numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
-        feature_vector[feature_name] = 0.0 if pd.isna(numeric) else float(numeric)
+        raw_value = row[dataset_column] if dataset_column is not None else feature.get("default_value")
+        feature_vector[feature_name] = normalize_feature_value(
+            feature,
+            _python_value(raw_value),
+            source=f"dataset row {row_index}",
+        )
     return feature_vector

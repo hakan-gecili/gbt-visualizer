@@ -51,11 +51,12 @@ The goal is to make model behavior transparent, intuitive, and explorable in rea
 
 1. A LightGBM model is loaded from a `.txt` file  
 2. A dataset is loaded from a `.csv` file  
-3. For a selected observation:
+3. A feature schema file is loaded from a `.json` file
+4. For a selected observation:
    - Each tree is evaluated
    - The decision path (root → leaf) is computed
    - Each tree’s contribution to the ensemble prediction is calculated  
-4. The application visualizes:
+5. The application visualizes:
    - Tree structure
    - Active decision paths
    - Per-tree contribution to the final prediction
@@ -84,6 +85,47 @@ uvicorn app.main:app --app-dir backend --reload
 npm install
 npm run dev
 ```
+
+## Build Example from CSV
+
+The recommended workflow for new datasets is to generate a complete example folder directly from a training CSV. The helper script trains a LightGBM binary classifier, creates a compact preview dataset, and writes a backend-compatible feature schema in one step.
+
+```bash
+python tools/build_example_from_csv.py \
+  --data data/train.csv \
+  --target-column target \
+  --output-dir examples/my_dataset \
+  --n-estimators 15 \
+  --max-depth 4 \
+  --learning-rate 0.1
+```
+
+This script generates:
+
+* `model.txt`
+* `dataset.csv`
+* `feature_schema.json`
+
+Key optional arguments:
+
+* `--max-rows`: limit the exported `dataset.csv` row count for a compact example
+* `--inject-missing`: add a few missing values to the exported dataset for UI testing
+* `--schema-overrides`: apply a small JSON override file during schema inference
+* `--drop-columns`: exclude comma-separated columns from training and export
+
+The generated folder can usually be loaded by the app directly without manual edits.
+
+## Feature Schema Notes
+
+The app supports numeric, binary, categorical, and missing values. `feature_schema.json` controls typed feature inputs and keeps prediction, contribution, and tree-path behavior aligned.
+
+In most cases you should use `tools/build_example_from_csv.py`, which already produces `feature_schema.json` for you. If you only need to regenerate the schema from an existing dataset, `tools/generate_feature_schema.py` is still available as a lower-level helper.
+
+Schema inference remains intentionally conservative:
+
+* schema is inferred from the dataset, not the model file
+* ambiguous columns may still require manual overrides
+* dataset column names must match model feature names unless overridden
 
 ## Deploying On Render
 
@@ -126,6 +168,7 @@ frontend/dist
 
 * Upload a LightGBM model (.txt)
 * Upload a dataset (.csv)
+* Optionally upload a feature schema (.json)
 * Select an observation
 * Explore:
     * Decision paths in trees
@@ -138,7 +181,7 @@ Or use the Examples dropdown to quickly load preconfigured models and datasets.
 
 * Supports LightGBM models only
 * Designed for binary classification
-* Assumes numerical input features
+* Supports numeric, binary, categorical, and missing values
 * Large models (many trees or deep trees) may reduce visual clarity
 * Does not yet include feature importance or SHAP-based explanations
 

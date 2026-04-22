@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from app.schemas.common import FeatureMetadata, LayoutEdge, PredictionSummary, PreviewPayload
+from app.schemas.common import FeatureMetadata, FeatureValue, LayoutEdge, PredictionSummary, PreviewPayload
 
 
 class ModelSummary(BaseModel):
@@ -35,7 +35,7 @@ class TreeLayoutNode(BaseModel):
     y: float
     is_leaf: bool
     split_feature: str
-    threshold: float
+    threshold: float | str
     left_child_id: int
     right_child_id: int
     subtree_leaf_count: int
@@ -87,7 +87,7 @@ class PredictResponse(BaseModel):
 class SamplePayload(BaseModel):
     source: str
     row_index: int
-    feature_vector: Dict[str, float]
+    feature_vector: Dict[str, FeatureValue]
 
 
 class SelectRowResponse(BaseModel):
@@ -138,3 +138,9 @@ class SessionMetadataResponse(BaseModel):
     model_summary: ModelSummary
     feature_metadata: List[FeatureMetadata]
     dataset_summary: MetadataDatasetSummary
+
+
+class SchemaUploadResponse(BaseModel):
+    dataset_summary: MetadataDatasetSummary
+    feature_metadata: List[FeatureMetadata]
+    preview: Optional[PreviewPayload] = None

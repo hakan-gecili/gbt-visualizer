@@ -10,7 +10,10 @@ class NormalizedNode:
     node_id: int
     depth: int
     split_feature: str
-    threshold: float
+    threshold: str
+    decision_type: str
+    default_left: bool
+    missing_type: str
     left_child_id: int
     right_child_id: int
     subtree_leaf_count: int = 0
