@@ -11,26 +11,73 @@ const LABEL_EXPLANATION =
   'Label is the predicted class after converting the final margin into probability and applying the classification threshold used in the app.'
 const TREES_EXPLANATION =
   'Trees is the total number of boosting trees in the loaded LightGBM model. The final prediction is formed by summing contributions from all of them.'
+const DISTANCE_TO_FLIP_EXPLANATION =
+  'Distance to Flip is the absolute probability change needed to cross the decision threshold. Positive means the probability must increase to flip; negative means it must decrease.'
+
+function formatDecisionThreshold(threshold: number) {
+  return threshold.toFixed(2)
+}
+
+function formatDistanceToFlip(probability: number, decisionThreshold: number) {
+  const difference = probability - decisionThreshold
+  const absoluteDistance = Math.abs(difference)
+
+  if (absoluteDistance < 0.005) {
+    return {
+      value: '0.00',
+      detail: 'At threshold',
+    }
+  }
+
+  const needsIncrease = difference < 0
+  return {
+    value: `${needsIncrease ? '+' : '-'}${absoluteDistance.toFixed(2)}`,
+    detail: needsIncrease ? 'to Class 1' : 'to Class 0',
+  }
+}
+
 export function PredictionSummary({
   prediction,
   treeResults,
 }: PredictionSummaryProps) {
+  const decisionThreshold = prediction?.decision_threshold ?? 0.5
+  const thresholdPercent = Math.max(0, Math.min(1, decisionThreshold)) * 100
+  const thresholdLabelClass =
+    thresholdPercent >= 78 ? 'probability-threshold-label align-left' : 'probability-threshold-label align-right'
+  const distanceToFlip = prediction
+    ? formatDistanceToFlip(prediction.probability, decisionThreshold)
+    : null
+
   return (
     <section className="panel prediction-panel">
       <div className="panel-header">
-        <h2>Prediction Summary</h2>
-        <span className="panel-caption">Raw margin first, sigmoid once at the end</span>
+        <div>
+          <h2>Prediction Summary</h2>
+          <span className="panel-caption">Raw margin first, sigmoid once at the end</span>
+        </div>
       </div>
       {prediction ? (
         <>
           <div className="probability-meter">
             <div className="probability-fill" style={{ width: `${prediction.probability * 100}%` }} />
+            <div
+              className="probability-threshold-marker"
+              style={{ left: `${thresholdPercent}%` }}
+              aria-hidden="true"
+            >
+              <span className={thresholdLabelClass}>{`Threshold = ${formatDecisionThreshold(decisionThreshold)}`}</span>
+            </div>
             <div className="probability-copy">
               <span>Probability</span>
               <strong>{prediction.probability.toFixed(4)}</strong>
             </div>
           </div>
           <div className="stat-grid">
+            <div className="info-card" data-tooltip={DISTANCE_TO_FLIP_EXPLANATION} tabIndex={0}>
+              <span>Distance to Flip</span>
+              <strong>{distanceToFlip?.value ?? '0.00'}</strong>
+              <small>{distanceToFlip?.detail ?? 'At threshold'}</small>
+            </div>
             <div className="info-card" data-tooltip={MARGIN_EXPLANATION} tabIndex={0}>
               <span>Margin</span>
               <strong>{prediction.margin.toFixed(4)}</strong>

@@ -16,31 +16,10 @@ from app.services.dataset_service import (
 )
 from app.services.feature_schema_service import FeatureSchemaError, build_feature_metadata, parse_feature_schema_json
 from app.services.prediction_service import predict_model
+from app.services.serialization_service import serialize_prediction, serialize_tree_predictions
 
 router = APIRouter(prefix="/api", tags=["data"])
 logger = logging.getLogger(__name__)
-
-
-def _prediction_payload(prediction_result):
-    return {
-        "margin": prediction_result.margin,
-        "probability": prediction_result.probability,
-        "predicted_label": 1 if prediction_result.probability >= 0.5 else 0,
-    }
-
-
-def _tree_payloads(prediction_result):
-    return [
-        {
-            "tree_index": item.tree_index,
-            "selected_leaf_id": item.selected_leaf_id,
-            "leaf_value": item.leaf_value,
-            "contribution": item.leaf_value,
-            "active_path_node_ids": item.path_node_ids,
-        }
-        for item in prediction_result.tree_results
-    ]
-
 
 @router.post("/data/upload", response_model=DatasetUploadResponse)
 async def upload_data(
@@ -129,6 +108,7 @@ async def select_row(request: SelectRowRequest) -> SelectRowResponse:
         )
         prepared_feature_vector, prediction_result = predict_model(
             session.model,
+            session.predictor,
             session.feature_metadata,
             feature_vector,
         )
@@ -138,8 +118,8 @@ async def select_row(request: SelectRowRequest) -> SelectRowResponse:
                 "row_index": request.row_index,
                 "feature_vector": prepared_feature_vector,
             },
-            prediction=_prediction_payload(prediction_result),
-            tree_results=_tree_payloads(prediction_result),
+            prediction=serialize_prediction(prediction_result),
+            tree_results=serialize_tree_predictions(prediction_result),
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -1,4 +1,4 @@
-import type { TreeLayout, TreePredictionResult } from '../types/api'
+import type { TreeLayout, TreeLayoutNode, TreePredictionResult } from '../types/api'
 
 export type Point = {
   x: number
@@ -53,4 +53,33 @@ export function formatThreshold(threshold: number | string) {
     return String(numeric)
   }
   return numeric.toFixed(3).replace(/\.?0+$/, '')
+}
+
+export function formatSplitCondition(node: TreeLayoutNode, branchDirection: 'left' | 'right') {
+  return `${node.split_feature} ${branchDirection === 'left' ? '≤' : '>'} ${formatThreshold(node.threshold)}`
+}
+
+export function buildSelectedLeafPathConditions(tree: TreeLayout, treeResult: TreePredictionResult | undefined) {
+  if (!treeResult) {
+    return []
+  }
+
+  const nodeMap = new Map(tree.nodes.map((node) => [node.node_id, node]))
+  const traversalSequence = [...treeResult.active_path_node_ids, treeResult.selected_leaf_id]
+
+  return treeResult.active_path_node_ids.flatMap((nodeId, index) => {
+    const node = nodeMap.get(nodeId)
+    const nextId = traversalSequence[index + 1]
+    if (!node || nextId === undefined) {
+      return []
+    }
+
+    const branchDirection =
+      nextId === node.left_child_id ? 'left' : nextId === node.right_child_id ? 'right' : null
+    if (!branchDirection) {
+      return []
+    }
+
+    return [formatSplitCondition(node, branchDirection)]
+  })
 }

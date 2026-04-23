@@ -7,9 +7,11 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from app.core.session_store import session_store
 from app.domain.session_types import SessionState
 from app.schemas.responses import ModelUploadResponse
-from app.services.model_loader import load_normalized_model
+from app.adapters.registry import ModelAdapterResolutionError
+from app.services.model_loader import load_ensemble_model
 from app.services.feature_schema_service import build_feature_metadata
 from app.services.model_normalizer import LightGBMModelNormalizationError, summarize_layout
+from app.services.serialization_service import serialize_model_summary
 
 router = APIRouter(prefix="/api/model", tags=["model"])
 logger = logging.getLogger(__name__)
@@ -19,7 +21,10 @@ logger = logging.getLogger(__name__)
 async def upload_model(model_file: UploadFile = File(...)) -> ModelUploadResponse:
     try:
         logger.info("Received model upload: filename=%s content_type=%s", model_file.filename, model_file.content_type)
-        model = await load_normalized_model(model_file)
+        model, predictor = await load_ensemble_model(model_file)
+    except ModelAdapterResolutionError as exc:
+        logger.exception("Model upload failed adapter resolution: filename=%s", model_file.filename)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except LightGBMModelNormalizationError as exc:
         logger.exception("Model upload failed normalization: filename=%s", model_file.filename)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -31,18 +36,14 @@ async def upload_model(model_file: UploadFile = File(...)) -> ModelUploadRespons
     session = SessionState(
         session_id=model.model_id,
         model=model,
+        predictor=predictor,
         feature_metadata=feature_metadata,
     )
     session_store.save(session)
     max_tree_depth, total_leaves = summarize_layout(model)
     return ModelUploadResponse(
         session_id=session.session_id,
-        model_summary={
-            "model_type": "lightgbm_binary_classifier",
-            "num_trees": model.num_trees,
-            "num_features": len(model.feature_names),
-            "feature_names": model.feature_names,
-        },
+        model_summary=serialize_model_summary(model),
         feature_metadata=feature_metadata,
         layout_summary={
             "max_tree_depth": max_tree_depth,

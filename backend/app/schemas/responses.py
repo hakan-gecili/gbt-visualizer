@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from app.schemas.common import FeatureMetadata, FeatureValue, LayoutEdge, PredictionSummary, PreviewPayload
+from app.schemas.common import FeatureImportanceEntry, FeatureMetadata, FeatureValue, LayoutEdge, PredictionSummary, PreviewPayload
 
 
 class ModelSummary(BaseModel):
@@ -12,6 +12,8 @@ class ModelSummary(BaseModel):
     num_trees: int
     num_features: int
     feature_names: List[str]
+    decision_threshold: float = 0.5
+    global_feature_importance: List[FeatureImportanceEntry] = []
 
 
 class LayoutSummary(BaseModel):

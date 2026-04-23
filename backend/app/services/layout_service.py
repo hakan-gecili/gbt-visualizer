@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from app.domain.model_types import NormalizedModel, extract_edges
+from app.domain.model_types import EnsembleModel, extract_edges
 
 
-def serialize_layout(model: NormalizedModel) -> dict:
+def serialize_layout(model: EnsembleModel) -> dict:
     trees = []
     for tree in model.trees:
         trees.append(

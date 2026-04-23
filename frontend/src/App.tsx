@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import { ContributionChartPanel } from './components/ContributionChartPanel'
 import { DatasetTable } from './components/DatasetTable'
 import { ExamplesPanel } from './components/ExamplesPanel'
+import { FeatureImportancePanel } from './components/FeatureImportancePanel'
 import { FeatureControlPanel } from './components/FeatureControlPanel'
+import { FloatingProbabilityGauge } from './components/FloatingProbabilityGauge'
+import { PathExplanationPanel } from './components/PathExplanationPanel'
 import { PredictionSummary } from './components/PredictionSummary'
 import { RadialTreeView } from './components/RadialTreeView'
 import { SelectedTreePanel } from './components/SelectedTreePanel'
@@ -12,6 +15,7 @@ import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { fetchExamples, fetchLayout, loadExample, predict, selectDatasetRow, uploadDataset, uploadFeatureSchema, uploadModel } from './services/model'
 import type {
   DatasetSummary,
+  FeatureImportanceEntry,
   FeatureMetadata,
   FeatureValue,
   PredictionSummary as PredictionSummaryType,
@@ -43,6 +47,8 @@ function App() {
   const [datasetSummary, setDatasetSummary] = useState<DatasetSummary | null>(null)
   const [prediction, setPrediction] = useState<PredictionSummaryType | null>(null)
   const [treeResults, setTreeResults] = useState<TreePredictionResult[]>([])
+  const [globalFeatureImportance, setGlobalFeatureImportance] = useState<FeatureImportanceEntry[]>([])
+  const [isFeatureImportanceOpen, setIsFeatureImportanceOpen] = useState(false)
   const [panelScale, setPanelScale] = useState(1)
   const [hoveredTreeIndex, setHoveredTreeIndex] = useState<number | null>(null)
   const [selectedTreeIndex, setSelectedTreeIndex] = useState<number | null>(null)
@@ -51,6 +57,9 @@ function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const predictionRequestIdRef = useRef(0)
   const appliedFeatureVectorKeyRef = useRef('')
+  const appShellRef = useRef<HTMLElement | null>(null)
+  const sidebarRef = useRef<HTMLElement | null>(null)
+  const [isRadialDarkMode, setIsRadialDarkMode] = useState(false)
 
   const debouncedFeatureVector = useDebouncedValue(featureVector, 150)
 
@@ -109,12 +118,14 @@ function App() {
       setSessionId(modelResponse.session_id)
       setFeatureMetadata(modelResponse.feature_metadata)
       setFeatureVector(nextFeatureVector)
+      setGlobalFeatureImportance(modelResponse.model_summary.global_feature_importance)
       setLayoutTrees(layoutResponse.layout.trees)
       setSelectedTreeIndex(layoutResponse.layout.trees[0]?.tree_index ?? null)
       setDatasetPreview(null)
       setDatasetSummary(null)
       setPrediction(null)
       setTreeResults([])
+      setIsFeatureImportanceOpen(false)
       setHoveredTreeIndex(null)
       setSelectedRowIndex(null)
       predictionRequestIdRef.current = 0
@@ -193,12 +204,14 @@ function App() {
       setSessionId(response.session_id)
       setFeatureMetadata(response.feature_metadata)
       setFeatureVector(nextFeatureVector)
+      setGlobalFeatureImportance(response.model_summary.global_feature_importance)
       setLayoutTrees(layoutResponse.layout.trees)
       setSelectedTreeIndex(layoutResponse.layout.trees[0]?.tree_index ?? null)
       setDatasetPreview(response.preview)
       setDatasetSummary(response.dataset_summary)
       setPrediction(null)
       setTreeResults([])
+      setIsFeatureImportanceOpen(false)
       setHoveredTreeIndex(null)
       setSelectedRowIndex(null)
       predictionRequestIdRef.current = 0
@@ -247,8 +260,8 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
+    <main ref={appShellRef} className="app-shell">
+      <aside ref={sidebarRef} className="sidebar">
         <UploadPanel
           sessionId={sessionId}
           busy={busy}
@@ -284,15 +297,21 @@ function App() {
         <RadialTreeView
           trees={layoutTrees}
           treeResults={treeResults}
-          probability={prediction?.probability ?? null}
           panelScale={panelScale}
           onPanelScaleChange={setPanelScale}
           hoveredTreeIndex={hoveredTreeIndex}
           onHoverTree={setHoveredTreeIndex}
           selectedTreeIndex={selectedTreeIndex}
           onSelectTree={setSelectedTreeIndex}
+          isDarkMode={isRadialDarkMode}
+          onToggleDarkMode={() => setIsRadialDarkMode((current) => !current)}
         />
         <SelectedTreePanel
+          trees={layoutTrees}
+          treeResults={treeResults}
+          selectedTreeIndex={selectedTreeIndex}
+        />
+        <PathExplanationPanel
           trees={layoutTrees}
           treeResults={treeResults}
           selectedTreeIndex={selectedTreeIndex}
@@ -311,6 +330,22 @@ function App() {
           </span>
         </footer>
       </section>
+      {sessionId ? (
+        <FloatingProbabilityGauge
+          probability={prediction?.probability ?? null}
+          isDarkMode={isRadialDarkMode}
+          appShellRef={appShellRef}
+          sidebarRef={sidebarRef}
+          isFeatureImportanceOpen={isFeatureImportanceOpen}
+          onToggleFeatureImportance={() => setIsFeatureImportanceOpen((current) => !current)}
+        />
+      ) : null}
+      <FeatureImportancePanel
+        isOpen={isFeatureImportanceOpen}
+        onClose={() => setIsFeatureImportanceOpen(false)}
+        globalImportance={globalFeatureImportance}
+        localImportance={prediction?.local_feature_importance ?? []}
+      />
     </main>
   )
 }

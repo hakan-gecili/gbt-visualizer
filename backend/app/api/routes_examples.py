@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
+from app.adapters.registry import ModelAdapterResolutionError, supported_model_extensions
 from app.core.session_store import session_store
 from app.domain.session_types import SessionState
 from app.schemas.responses import ExamplesListResponse, LoadExampleResponse
@@ -15,8 +16,9 @@ from app.services.dataset_service import (
     summarize_dataset,
 )
 from app.services.feature_schema_service import FeatureSchemaError, build_feature_metadata, parse_feature_schema_json
-from app.services.model_loader import load_normalized_model_from_path
+from app.services.model_loader import load_ensemble_model_from_path
 from app.services.model_normalizer import LightGBMModelNormalizationError, summarize_layout
+from app.services.serialization_service import serialize_model_summary
 
 router = APIRouter(prefix="/api/examples", tags=["examples"])
 logger = logging.getLogger(__name__)
@@ -38,14 +40,20 @@ def _resolve_example_files(example_name: str) -> tuple[Path, Path, Path | None]:
     if not example_dir.is_dir():
         raise HTTPException(status_code=404, detail=f"Example '{example_name}' was not found.")
 
-    model_files = sorted(example_dir.glob("*.txt"))
+    model_files = sorted(
+        path
+        for extension in supported_model_extensions()
+        for path in example_dir.glob(f"*{extension}")
+    )
     dataset_files = sorted(example_dir.glob("*.csv"))
+    supported_extensions = ", ".join(supported_model_extensions())
 
     if len(model_files) != 1:
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Example '{example_name}' must contain exactly one .txt model file. "
+                f"Example '{example_name}' must contain exactly one supported model file "
+                f"({supported_extensions}). "
                 f"Found {len(model_files)}."
             ),
         )
@@ -95,7 +103,7 @@ async def load_example(example_name: str) -> LoadExampleResponse:
             dataset_path,
             schema_path,
         )
-        model = load_normalized_model_from_path(str(model_path))
+        model, predictor = load_ensemble_model_from_path(str(model_path))
         feature_metadata = build_feature_metadata(model.feature_names, _load_example_schema(schema_path))
         dataframe = load_dataset_from_path(str(dataset_path))
         dataset_summary = summarize_dataset(dataframe, model.feature_names)
@@ -105,6 +113,7 @@ async def load_example(example_name: str) -> LoadExampleResponse:
         session = SessionState(
             session_id=model.model_id,
             model=model,
+            predictor=predictor,
             feature_metadata=feature_metadata,
             dataset_frame=dataframe,
             dataset_summary=dataset_summary,
@@ -116,12 +125,7 @@ async def load_example(example_name: str) -> LoadExampleResponse:
         return LoadExampleResponse(
             session_id=session.session_id,
             example_name=example_name,
-            model_summary={
-                "model_type": "lightgbm_binary_classifier",
-                "num_trees": model.num_trees,
-                "num_features": len(model.feature_names),
-                "feature_names": model.feature_names,
-            },
+            model_summary=serialize_model_summary(model),
             feature_metadata=feature_metadata,
             layout_summary={
                 "max_tree_depth": max_tree_depth,
@@ -132,6 +136,9 @@ async def load_example(example_name: str) -> LoadExampleResponse:
         )
     except HTTPException:
         raise
+    except ModelAdapterResolutionError as exc:
+        logger.exception("Example '%s' failed adapter resolution", example_name)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except LightGBMModelNormalizationError as exc:
         logger.exception("Example '%s' failed model normalization", example_name)
         raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -5,14 +5,15 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from app.domain.model_types import NormalizedModel
+from app.domain.model_types import EnsembleModel
 
 
 @dataclass
 class SessionState:
     session_id: str
-    model: NormalizedModel
+    model: EnsembleModel
     feature_metadata: List[Dict[str, Any]]
+    predictor: Any | None = None
     dataset_frame: Optional[pd.DataFrame] = None
     dataset_summary: Dict[str, Any] = field(
         default_factory=lambda: {
@@ -25,4 +26,3 @@ class SessionState:
         }
     )
     preview: Optional[Dict[str, Any]] = None
-

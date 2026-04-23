@@ -17,11 +17,18 @@ export type FeatureMetadata = {
   options: FeatureOption[]
 }
 
+export type FeatureImportanceEntry = {
+  feature_name: string
+  value: number
+}
+
 export type ModelSummary = {
   model_type: string
   num_trees: number
   num_features: number
   feature_names: string[]
+  decision_threshold: number
+  global_feature_importance: FeatureImportanceEntry[]
 }
 
 export type LayoutSummary = {
@@ -128,6 +135,8 @@ export type PredictionSummary = {
   margin: number
   probability: number
   predicted_label: number
+  decision_threshold: number
+  local_feature_importance: FeatureImportanceEntry[]
 }
 
 export type TreePredictionResult = {

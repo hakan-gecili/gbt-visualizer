@@ -25,10 +25,17 @@ class FeatureMetadata(BaseModel):
     options: List[FeatureOption] = []
 
 
+class FeatureImportanceEntry(BaseModel):
+    feature_name: str
+    value: float
+
+
 class PredictionSummary(BaseModel):
     margin: float
     probability: float
     predicted_label: int
+    decision_threshold: float = 0.5
+    local_feature_importance: List[FeatureImportanceEntry] = []
 
 
 class ApiErrorDetail(BaseModel):

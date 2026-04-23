@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { TreeLayout, TreePredictionResult } from '../types/api'
 import { buildHighlightedEdgeSet, findRootNodeId, formatThreshold } from './treeRenderUtils'
@@ -21,6 +21,7 @@ const BOTTOM_PADDING = 64
 const SIDE_PADDING = 64
 const DEFAULT_ZOOM = 0.9
 const DEFAULT_PAN_Y = 0
+const DEFAULT_PAN_OFFSET = { x: 0, y: 0 }
 
 function contributionLabel(value: number) {
   return `${value >= 0 ? '+' : ''}${value.toFixed(4)}`
@@ -94,6 +95,10 @@ export function SelectedTreePanel({
 }: SelectedTreePanelProps) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   const [panY, setPanY] = useState(DEFAULT_PAN_Y)
+  const [panOffset, setPanOffset] = useState(DEFAULT_PAN_OFFSET)
+  const [isDraggingBackground, setIsDraggingBackground] = useState(false)
+  const dragStartMouseRef = useRef<Point | null>(null)
+  const dragStartOffsetRef = useRef<Point>(DEFAULT_PAN_OFFSET)
   const selectedTree =
     selectedTreeIndex === null ? null : trees.find((tree) => tree.tree_index === selectedTreeIndex) ?? null
   const treeResult = treeResults.find((item) => item.tree_index === selectedTreeIndex)
@@ -101,7 +106,44 @@ export function SelectedTreePanel({
   useEffect(() => {
     setZoom(DEFAULT_ZOOM)
     setPanY(DEFAULT_PAN_Y)
+    setPanOffset(DEFAULT_PAN_OFFSET)
+    setIsDraggingBackground(false)
+    dragStartMouseRef.current = null
+    dragStartOffsetRef.current = DEFAULT_PAN_OFFSET
   }, [selectedTreeIndex])
+
+  useEffect(() => {
+    if (!isDraggingBackground) {
+      return
+    }
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const dragStartMouse = dragStartMouseRef.current
+      if (!dragStartMouse) {
+        return
+      }
+
+      setPanOffset({
+        x: dragStartOffsetRef.current.x + (event.clientX - dragStartMouse.x),
+        y: dragStartOffsetRef.current.y + (event.clientY - dragStartMouse.y),
+      })
+    }
+
+    const stopDragging = () => {
+      setIsDraggingBackground(false)
+      dragStartMouseRef.current = null
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', stopDragging)
+    window.addEventListener('blur', stopDragging)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', stopDragging)
+      window.removeEventListener('blur', stopDragging)
+    }
+  }, [isDraggingBackground])
 
   const detailPayload = useMemo(() => {
     if (!selectedTree) {
@@ -120,8 +162,19 @@ export function SelectedTreePanel({
     }
   }, [selectedTree, treeResult])
 
-  const transformX = (VIEWBOX_WIDTH * (1 - zoom)) / 2
-  const transformY = clamp(panY, -200, 200)
+  const handleBackgroundMouseDown = (event: React.MouseEvent<SVGRectElement>) => {
+    if (event.button !== 0) {
+      return
+    }
+
+    event.preventDefault()
+    dragStartMouseRef.current = { x: event.clientX, y: event.clientY }
+    dragStartOffsetRef.current = panOffset
+    setIsDraggingBackground(true)
+  }
+
+  const transformX = (VIEWBOX_WIDTH * (1 - zoom)) / 2 + panOffset.x
+  const transformY = clamp(panY, -200, 200) + panOffset.y
 
   return (
     <section className="panel selected-tree-panel">
@@ -149,11 +202,19 @@ export function SelectedTreePanel({
           <div className="selected-tree-workspace">
             <div className="selected-tree-shell">
               <svg
-                className="selected-tree-svg"
+                className={isDraggingBackground ? 'selected-tree-svg dragging' : 'selected-tree-svg'}
                 viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
                 role="img"
                 aria-label={`Detailed view for tree ${selectedTree.tree_index}`}
               >
+                <rect
+                  x={0}
+                  y={0}
+                  width={VIEWBOX_WIDTH}
+                  height={VIEWBOX_HEIGHT}
+                  className="selected-tree-drag-surface"
+                  onMouseDown={handleBackgroundMouseDown}
+                />
                 <g transform={`translate(${transformX} ${transformY}) scale(${zoom})`}>
                   {selectedTree.edges.map((edge) => {
                     const source = detailPayload.pointMap.get(edge.source_id)
