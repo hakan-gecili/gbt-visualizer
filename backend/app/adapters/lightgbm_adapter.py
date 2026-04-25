@@ -63,6 +63,7 @@ class LightGBMModelAdapter:
         model = EnsembleModel(
             model_id=uuid4().hex,
             metadata=EnsembleMetadata(
+                model_family=cls.model_family,
                 model_type=cls.model_type,
                 feature_names=feature_names,
                 class_labels=[0, 1],

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.core.session_store import session_store
 from app.domain.session_types import SessionState
@@ -18,10 +18,13 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/upload", response_model=ModelUploadResponse)
-async def upload_model(model_file: UploadFile = File(...)) -> ModelUploadResponse:
+async def upload_model(
+    model_file: UploadFile = File(...),
+    model_family: str | None = Form(default=None),
+) -> ModelUploadResponse:
     try:
         logger.info("Received model upload: filename=%s content_type=%s", model_file.filename, model_file.content_type)
-        model, predictor = await load_ensemble_model(model_file)
+        model, predictor = await load_ensemble_model(model_file, model_family=model_family)
     except ModelAdapterResolutionError as exc:
         logger.exception("Model upload failed adapter resolution: filename=%s", model_file.filename)
         raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -1,0 +1,112 @@
+{
+  "features": [
+    {
+      "name": "Age",
+      "short_name": "Age",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.42,
+      "max_value": 80.0,
+      "default_value": 28.0,
+      "options": []
+    },
+    {
+      "name": "Embarked",
+      "short_name": "Embarked",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "S",
+      "options": [
+        {
+          "value": "C",
+          "label": "C",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "Q",
+          "label": "Q",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "S",
+          "label": "S",
+          "encoded_value": 2.0
+        }
+      ]
+    },
+    {
+      "name": "Fare",
+      "short_name": "Fare",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 512.3292,
+      "default_value": 14.4542,
+      "options": []
+    },
+    {
+      "name": "Parch",
+      "short_name": "Parch",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 6.0,
+      "default_value": 0.0,
+      "options": []
+    },
+    {
+      "name": "PassengerId",
+      "short_name": "PassengerI",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 1.0,
+      "max_value": 891.0,
+      "default_value": 446.0,
+      "options": []
+    },
+    {
+      "name": "Pclass",
+      "short_name": "Pclass",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 1.0,
+      "max_value": 3.0,
+      "default_value": 3.0,
+      "options": []
+    },
+    {
+      "name": "Sex",
+      "short_name": "Sex",
+      "type": "binary",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "male",
+      "options": [
+        {
+          "value": "female",
+          "label": "female",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "male",
+          "label": "male",
+          "encoded_value": 1.0
+        }
+      ]
+    },
+    {
+      "name": "SibSp",
+      "short_name": "SibSp",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 8.0,
+      "default_value": 0.0,
+      "options": []
+    }
+  ],
+  "target_column": "target"
+}

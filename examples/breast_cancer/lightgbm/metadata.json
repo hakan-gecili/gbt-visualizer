@@ -1,0 +1,19 @@
+{
+  "model_family": "lightgbm",
+  "model_file": "model.txt",
+  "training_parameters": {
+    "objective": "binary",
+    "metric": "binary_logloss",
+    "learning_rate": 0.1,
+    "num_leaves": 31,
+    "max_depth": 6,
+    "seed": 42,
+    "feature_pre_filter": false,
+    "verbosity": -1
+  },
+  "metrics": {},
+  "target_mapping": {
+    "0": 0,
+    "1": 1
+  }
+}

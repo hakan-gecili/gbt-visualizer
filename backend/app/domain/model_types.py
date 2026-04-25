@@ -23,6 +23,8 @@ class TreeNode:
     condition: SplitCondition
     left_child_id: int
     right_child_id: int
+    gain: float | None = None
+    cover: float | None = None
     subtree_leaf_count: int = 0
     angle: float = 0.0
     radius: float = 0.0
@@ -58,6 +60,7 @@ class TreeLeaf:
     leaf_id: int
     depth: int
     value: float
+    cover: float | None = None
     subtree_leaf_count: int = 1
     angle: float = 0.0
     radius: float = 0.0
@@ -81,6 +84,7 @@ class Tree:
 
 @dataclass
 class EnsembleMetadata:
+    model_family: str
     model_type: str
     feature_names: List[str]
     class_labels: List[int | str] = field(default_factory=lambda: [0, 1])
@@ -110,6 +114,10 @@ class EnsembleModel:
     @property
     def model_type(self) -> str:
         return self.metadata.model_type
+
+    @property
+    def model_family(self) -> str:
+        return self.metadata.model_family
 
     @property
     def decision_threshold(self) -> float:

@@ -15,6 +15,7 @@ def serialize_feature_importance(entries: list[FeatureImportanceEntry]) -> list[
 
 def serialize_model_summary(model: EnsembleModel) -> dict:
     return {
+        "model_family": model.model_family,
         "model_type": model.model_type,
         "num_trees": model.num_trees,
         "num_features": len(model.feature_names),

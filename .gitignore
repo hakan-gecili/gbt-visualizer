@@ -34,6 +34,7 @@ venv/
 
 # Node
 build/
+datasets/
 
 # Env files
 .env.local

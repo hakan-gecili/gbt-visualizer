@@ -57,6 +57,16 @@
       ]
     },
     {
+      "name": "day",
+      "short_name": "day",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 1.0,
+      "max_value": 31.0,
+      "default_value": 16.0,
+      "options": []
+    },
+    {
       "name": "default",
       "short_name": "default",
       "type": "binary",
@@ -258,6 +268,77 @@
       ]
     },
     {
+      "name": "month",
+      "short_name": "month",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "may",
+      "options": [
+        {
+          "value": "apr",
+          "label": "apr",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "aug",
+          "label": "aug",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "dec",
+          "label": "dec",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "feb",
+          "label": "feb",
+          "encoded_value": 3.0
+        },
+        {
+          "value": "jan",
+          "label": "jan",
+          "encoded_value": 4.0
+        },
+        {
+          "value": "jul",
+          "label": "jul",
+          "encoded_value": 5.0
+        },
+        {
+          "value": "jun",
+          "label": "jun",
+          "encoded_value": 6.0
+        },
+        {
+          "value": "mar",
+          "label": "mar",
+          "encoded_value": 7.0
+        },
+        {
+          "value": "may",
+          "label": "may",
+          "encoded_value": 8.0
+        },
+        {
+          "value": "nov",
+          "label": "nov",
+          "encoded_value": 9.0
+        },
+        {
+          "value": "oct",
+          "label": "oct",
+          "encoded_value": 10.0
+        },
+        {
+          "value": "sep",
+          "label": "sep",
+          "encoded_value": 11.0
+        }
+      ]
+    },
+    {
       "name": "pdays",
       "short_name": "pdays",
       "type": "numeric",
@@ -309,5 +390,5 @@
       "options": []
     }
   ],
-  "target_column": "y"
+  "target_column": "target"
 }

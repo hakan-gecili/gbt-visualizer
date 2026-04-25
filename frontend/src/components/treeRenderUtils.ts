@@ -56,7 +56,8 @@ export function formatThreshold(threshold: number | string) {
 }
 
 export function formatSplitCondition(node: TreeLayoutNode, branchDirection: 'left' | 'right') {
-  return `${node.split_feature} ${branchDirection === 'left' ? '≤' : '>'} ${formatThreshold(node.threshold)}`
+  const operator = node.decision_type === '<' ? (branchDirection === 'left' ? '<' : '≥') : branchDirection === 'left' ? '≤' : '>'
+  return `${node.split_feature} ${operator} ${formatThreshold(node.threshold)}`
 }
 
 export function buildSelectedLeafPathConditions(tree: TreeLayout, treeResult: TreePredictionResult | undefined) {

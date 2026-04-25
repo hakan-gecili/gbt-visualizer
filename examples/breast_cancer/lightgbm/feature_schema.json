@@ -1,0 +1,305 @@
+{
+  "features": [
+    {
+      "name": "area error",
+      "short_name": "area error",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 6.802,
+      "max_value": 542.2,
+      "default_value": 24.53,
+      "options": []
+    },
+    {
+      "name": "compactness error",
+      "short_name": "compactnes",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.002252,
+      "max_value": 0.1354,
+      "default_value": 0.02045,
+      "options": []
+    },
+    {
+      "name": "concave points error",
+      "short_name": "concave po",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 0.05279,
+      "default_value": 0.01093,
+      "options": []
+    },
+    {
+      "name": "concavity error",
+      "short_name": "concavity ",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 0.396,
+      "default_value": 0.02589,
+      "options": []
+    },
+    {
+      "name": "fractal dimension error",
+      "short_name": "fractal di",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0008948,
+      "max_value": 0.02984,
+      "default_value": 0.003187,
+      "options": []
+    },
+    {
+      "name": "mean area",
+      "short_name": "mean area",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 143.5,
+      "max_value": 2501.0,
+      "default_value": 551.1,
+      "options": []
+    },
+    {
+      "name": "mean compactness",
+      "short_name": "mean compa",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.01938,
+      "max_value": 0.3454,
+      "default_value": 0.09263,
+      "options": []
+    },
+    {
+      "name": "mean concave points",
+      "short_name": "mean conca",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 0.2012,
+      "default_value": 0.0335,
+      "options": []
+    },
+    {
+      "name": "mean concavity",
+      "short_name": "mean conca",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 0.4268,
+      "default_value": 0.06154,
+      "options": []
+    },
+    {
+      "name": "mean fractal dimension",
+      "short_name": "mean fract",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.04996,
+      "max_value": 0.09744,
+      "default_value": 0.06154,
+      "options": []
+    },
+    {
+      "name": "mean perimeter",
+      "short_name": "mean perim",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 43.79,
+      "max_value": 188.5,
+      "default_value": 86.24,
+      "options": []
+    },
+    {
+      "name": "mean radius",
+      "short_name": "mean radiu",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 6.981,
+      "max_value": 28.11,
+      "default_value": 13.37,
+      "options": []
+    },
+    {
+      "name": "mean smoothness",
+      "short_name": "mean smoot",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.05263,
+      "max_value": 0.1634,
+      "default_value": 0.09587,
+      "options": []
+    },
+    {
+      "name": "mean symmetry",
+      "short_name": "mean symme",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.106,
+      "max_value": 0.304,
+      "default_value": 0.1792,
+      "options": []
+    },
+    {
+      "name": "mean texture",
+      "short_name": "mean textu",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 9.71,
+      "max_value": 39.28,
+      "default_value": 18.84,
+      "options": []
+    },
+    {
+      "name": "perimeter error",
+      "short_name": "perimeter ",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.757,
+      "max_value": 21.98,
+      "default_value": 2.287,
+      "options": []
+    },
+    {
+      "name": "radius error",
+      "short_name": "radius err",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.1115,
+      "max_value": 2.873,
+      "default_value": 0.3242,
+      "options": []
+    },
+    {
+      "name": "smoothness error",
+      "short_name": "smoothness",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.001713,
+      "max_value": 0.03113,
+      "default_value": 0.00638,
+      "options": []
+    },
+    {
+      "name": "symmetry error",
+      "short_name": "symmetry e",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.007882,
+      "max_value": 0.07895,
+      "default_value": 0.01873,
+      "options": []
+    },
+    {
+      "name": "texture error",
+      "short_name": "texture er",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.3602,
+      "max_value": 4.885,
+      "default_value": 1.108,
+      "options": []
+    },
+    {
+      "name": "worst area",
+      "short_name": "worst area",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 185.2,
+      "max_value": 4254.0,
+      "default_value": 686.5,
+      "options": []
+    },
+    {
+      "name": "worst compactness",
+      "short_name": "worst comp",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.02729,
+      "max_value": 1.058,
+      "default_value": 0.2119,
+      "options": []
+    },
+    {
+      "name": "worst concave points",
+      "short_name": "worst conc",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 0.291,
+      "default_value": 0.09993,
+      "options": []
+    },
+    {
+      "name": "worst concavity",
+      "short_name": "worst conc",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 1.252,
+      "default_value": 0.2267,
+      "options": []
+    },
+    {
+      "name": "worst fractal dimension",
+      "short_name": "worst frac",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.05504,
+      "max_value": 0.2075,
+      "default_value": 0.08004,
+      "options": []
+    },
+    {
+      "name": "worst perimeter",
+      "short_name": "worst peri",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 50.41,
+      "max_value": 251.2,
+      "default_value": 97.66,
+      "options": []
+    },
+    {
+      "name": "worst radius",
+      "short_name": "worst radi",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 7.93,
+      "max_value": 36.04,
+      "default_value": 14.97,
+      "options": []
+    },
+    {
+      "name": "worst smoothness",
+      "short_name": "worst smoo",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.07117,
+      "max_value": 0.2226,
+      "default_value": 0.1313,
+      "options": []
+    },
+    {
+      "name": "worst symmetry",
+      "short_name": "worst symm",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.1565,
+      "max_value": 0.6638,
+      "default_value": 0.2822,
+      "options": []
+    },
+    {
+      "name": "worst texture",
+      "short_name": "worst text",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 12.02,
+      "max_value": 49.54,
+      "default_value": 25.41,
+      "options": []
+    }
+  ],
+  "target_column": "target"
+}

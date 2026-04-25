@@ -1,0 +1,116 @@
+{
+  "features": [
+    {
+      "name": "age",
+      "short_name": "age",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -0.1072256316073538,
+      "max_value": 0.1107266754538114,
+      "default_value": 0.0053830603742482,
+      "options": []
+    },
+    {
+      "name": "bmi",
+      "short_name": "bmi",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -0.0902752958985094,
+      "max_value": 0.170555225980644,
+      "default_value": -0.0072837662096878,
+      "options": []
+    },
+    {
+      "name": "bp",
+      "short_name": "bp",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -0.1123988025440844,
+      "max_value": 0.132043616741213,
+      "default_value": -0.0056704222927573,
+      "options": []
+    },
+    {
+      "name": "s1",
+      "short_name": "s1",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -0.1267806699165132,
+      "max_value": 0.1539137131565154,
+      "default_value": -0.0043208655366134,
+      "options": []
+    },
+    {
+      "name": "s2",
+      "short_name": "s2",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -0.1156130659793989,
+      "max_value": 0.198787989657294,
+      "default_value": -0.003819065120535,
+      "options": []
+    },
+    {
+      "name": "s3",
+      "short_name": "s3",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -0.1023070505174159,
+      "max_value": 0.1811790603972785,
+      "default_value": -0.0065844676111554,
+      "options": []
+    },
+    {
+      "name": "s4",
+      "short_name": "s4",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -0.0763945037500033,
+      "max_value": 0.1852344432601986,
+      "default_value": -0.0025922619981832,
+      "options": []
+    },
+    {
+      "name": "s5",
+      "short_name": "s5",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -0.1260971208333046,
+      "max_value": 0.1335972819219135,
+      "default_value": -0.00194717108692205,
+      "options": []
+    },
+    {
+      "name": "s6",
+      "short_name": "s6",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": -0.137767225690003,
+      "max_value": 0.135611830689071,
+      "default_value": -0.0010776975004659,
+      "options": []
+    },
+    {
+      "name": "sex",
+      "short_name": "sex",
+      "type": "binary",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "-0.0446416365069891",
+      "options": [
+        {
+          "value": "-0.0446416365069891",
+          "label": "-0.0446416365069891",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "0.0506801187398186",
+          "label": "0.0506801187398186",
+          "encoded_value": 1.0
+        }
+      ]
+    }
+  ],
+  "target_column": "target"
+}

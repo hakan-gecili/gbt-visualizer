@@ -1,0 +1,663 @@
+{
+  "features": [
+    {
+      "name": "age",
+      "short_name": "age",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 17.0,
+      "max_value": 90.0,
+      "default_value": 37.0,
+      "options": []
+    },
+    {
+      "name": "capital_gain",
+      "short_name": "capital_ga",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 99999.0,
+      "default_value": 0.0,
+      "options": []
+    },
+    {
+      "name": "capital_loss",
+      "short_name": "capital_lo",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 4356.0,
+      "default_value": 0.0,
+      "options": []
+    },
+    {
+      "name": "education",
+      "short_name": "education",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "HS-grad",
+      "options": [
+        {
+          "value": "10th",
+          "label": "10th",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "11th",
+          "label": "11th",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "12th",
+          "label": "12th",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "1st-4th",
+          "label": "1st-4th",
+          "encoded_value": 3.0
+        },
+        {
+          "value": "5th-6th",
+          "label": "5th-6th",
+          "encoded_value": 4.0
+        },
+        {
+          "value": "7th-8th",
+          "label": "7th-8th",
+          "encoded_value": 5.0
+        },
+        {
+          "value": "9th",
+          "label": "9th",
+          "encoded_value": 6.0
+        },
+        {
+          "value": "Assoc-acdm",
+          "label": "Assoc-acdm",
+          "encoded_value": 7.0
+        },
+        {
+          "value": "Assoc-voc",
+          "label": "Assoc-voc",
+          "encoded_value": 8.0
+        },
+        {
+          "value": "Bachelors",
+          "label": "Bachelors",
+          "encoded_value": 9.0
+        },
+        {
+          "value": "Doctorate",
+          "label": "Doctorate",
+          "encoded_value": 10.0
+        },
+        {
+          "value": "HS-grad",
+          "label": "HS-grad",
+          "encoded_value": 11.0
+        },
+        {
+          "value": "Masters",
+          "label": "Masters",
+          "encoded_value": 12.0
+        },
+        {
+          "value": "Preschool",
+          "label": "Preschool",
+          "encoded_value": 13.0
+        },
+        {
+          "value": "Prof-school",
+          "label": "Prof-school",
+          "encoded_value": 14.0
+        },
+        {
+          "value": "Some-college",
+          "label": "Some-college",
+          "encoded_value": 15.0
+        }
+      ]
+    },
+    {
+      "name": "education_num",
+      "short_name": "education_",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 1.0,
+      "max_value": 16.0,
+      "default_value": 10.0,
+      "options": []
+    },
+    {
+      "name": "fnlwgt",
+      "short_name": "fnlwgt",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 12285.0,
+      "max_value": 1484705.0,
+      "default_value": 178356.0,
+      "options": []
+    },
+    {
+      "name": "hours_per_week",
+      "short_name": "hours_per_",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 1.0,
+      "max_value": 99.0,
+      "default_value": 40.0,
+      "options": []
+    },
+    {
+      "name": "marital_status",
+      "short_name": "marital_st",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "Married-civ-spouse",
+      "options": [
+        {
+          "value": "Divorced",
+          "label": "Divorced",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "Married-AF-spouse",
+          "label": "Married-AF-spouse",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "Married-civ-spouse",
+          "label": "Married-civ-spouse",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "Married-spouse-absent",
+          "label": "Married-spouse-absent",
+          "encoded_value": 3.0
+        },
+        {
+          "value": "Never-married",
+          "label": "Never-married",
+          "encoded_value": 4.0
+        },
+        {
+          "value": "Separated",
+          "label": "Separated",
+          "encoded_value": 5.0
+        },
+        {
+          "value": "Widowed",
+          "label": "Widowed",
+          "encoded_value": 6.0
+        }
+      ]
+    },
+    {
+      "name": "native_country",
+      "short_name": "native_cou",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "United-States",
+      "options": [
+        {
+          "value": "Cambodia",
+          "label": "Cambodia",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "Canada",
+          "label": "Canada",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "China",
+          "label": "China",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "Columbia",
+          "label": "Columbia",
+          "encoded_value": 3.0
+        },
+        {
+          "value": "Cuba",
+          "label": "Cuba",
+          "encoded_value": 4.0
+        },
+        {
+          "value": "Dominican-Republic",
+          "label": "Dominican-Republic",
+          "encoded_value": 5.0
+        },
+        {
+          "value": "Ecuador",
+          "label": "Ecuador",
+          "encoded_value": 6.0
+        },
+        {
+          "value": "El-Salvador",
+          "label": "El-Salvador",
+          "encoded_value": 7.0
+        },
+        {
+          "value": "England",
+          "label": "England",
+          "encoded_value": 8.0
+        },
+        {
+          "value": "France",
+          "label": "France",
+          "encoded_value": 9.0
+        },
+        {
+          "value": "Germany",
+          "label": "Germany",
+          "encoded_value": 10.0
+        },
+        {
+          "value": "Greece",
+          "label": "Greece",
+          "encoded_value": 11.0
+        },
+        {
+          "value": "Guatemala",
+          "label": "Guatemala",
+          "encoded_value": 12.0
+        },
+        {
+          "value": "Haiti",
+          "label": "Haiti",
+          "encoded_value": 13.0
+        },
+        {
+          "value": "Holand-Netherlands",
+          "label": "Holand-Netherlands",
+          "encoded_value": 14.0
+        },
+        {
+          "value": "Honduras",
+          "label": "Honduras",
+          "encoded_value": 15.0
+        },
+        {
+          "value": "Hong",
+          "label": "Hong",
+          "encoded_value": 16.0
+        },
+        {
+          "value": "Hungary",
+          "label": "Hungary",
+          "encoded_value": 17.0
+        },
+        {
+          "value": "India",
+          "label": "India",
+          "encoded_value": 18.0
+        },
+        {
+          "value": "Iran",
+          "label": "Iran",
+          "encoded_value": 19.0
+        },
+        {
+          "value": "Ireland",
+          "label": "Ireland",
+          "encoded_value": 20.0
+        },
+        {
+          "value": "Italy",
+          "label": "Italy",
+          "encoded_value": 21.0
+        },
+        {
+          "value": "Jamaica",
+          "label": "Jamaica",
+          "encoded_value": 22.0
+        },
+        {
+          "value": "Japan",
+          "label": "Japan",
+          "encoded_value": 23.0
+        },
+        {
+          "value": "Laos",
+          "label": "Laos",
+          "encoded_value": 24.0
+        },
+        {
+          "value": "Mexico",
+          "label": "Mexico",
+          "encoded_value": 25.0
+        },
+        {
+          "value": "Nicaragua",
+          "label": "Nicaragua",
+          "encoded_value": 26.0
+        },
+        {
+          "value": "Outlying-US(Guam-USVI-etc)",
+          "label": "Outlying-US(Guam-USVI-etc)",
+          "encoded_value": 27.0
+        },
+        {
+          "value": "Peru",
+          "label": "Peru",
+          "encoded_value": 28.0
+        },
+        {
+          "value": "Philippines",
+          "label": "Philippines",
+          "encoded_value": 29.0
+        },
+        {
+          "value": "Poland",
+          "label": "Poland",
+          "encoded_value": 30.0
+        },
+        {
+          "value": "Portugal",
+          "label": "Portugal",
+          "encoded_value": 31.0
+        },
+        {
+          "value": "Puerto-Rico",
+          "label": "Puerto-Rico",
+          "encoded_value": 32.0
+        },
+        {
+          "value": "Scotland",
+          "label": "Scotland",
+          "encoded_value": 33.0
+        },
+        {
+          "value": "South",
+          "label": "South",
+          "encoded_value": 34.0
+        },
+        {
+          "value": "Taiwan",
+          "label": "Taiwan",
+          "encoded_value": 35.0
+        },
+        {
+          "value": "Thailand",
+          "label": "Thailand",
+          "encoded_value": 36.0
+        },
+        {
+          "value": "Trinadad&Tobago",
+          "label": "Trinadad&Tobago",
+          "encoded_value": 37.0
+        },
+        {
+          "value": "United-States",
+          "label": "United-States",
+          "encoded_value": 38.0
+        },
+        {
+          "value": "Unknown",
+          "label": "Unknown",
+          "encoded_value": 39.0
+        },
+        {
+          "value": "Vietnam",
+          "label": "Vietnam",
+          "encoded_value": 40.0
+        },
+        {
+          "value": "Yugoslavia",
+          "label": "Yugoslavia",
+          "encoded_value": 41.0
+        }
+      ]
+    },
+    {
+      "name": "occupation",
+      "short_name": "occupation",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "Prof-specialty",
+      "options": [
+        {
+          "value": "Adm-clerical",
+          "label": "Adm-clerical",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "Armed-Forces",
+          "label": "Armed-Forces",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "Craft-repair",
+          "label": "Craft-repair",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "Exec-managerial",
+          "label": "Exec-managerial",
+          "encoded_value": 3.0
+        },
+        {
+          "value": "Farming-fishing",
+          "label": "Farming-fishing",
+          "encoded_value": 4.0
+        },
+        {
+          "value": "Handlers-cleaners",
+          "label": "Handlers-cleaners",
+          "encoded_value": 5.0
+        },
+        {
+          "value": "Machine-op-inspct",
+          "label": "Machine-op-inspct",
+          "encoded_value": 6.0
+        },
+        {
+          "value": "Other-service",
+          "label": "Other-service",
+          "encoded_value": 7.0
+        },
+        {
+          "value": "Priv-house-serv",
+          "label": "Priv-house-serv",
+          "encoded_value": 8.0
+        },
+        {
+          "value": "Prof-specialty",
+          "label": "Prof-specialty",
+          "encoded_value": 9.0
+        },
+        {
+          "value": "Protective-serv",
+          "label": "Protective-serv",
+          "encoded_value": 10.0
+        },
+        {
+          "value": "Sales",
+          "label": "Sales",
+          "encoded_value": 11.0
+        },
+        {
+          "value": "Tech-support",
+          "label": "Tech-support",
+          "encoded_value": 12.0
+        },
+        {
+          "value": "Transport-moving",
+          "label": "Transport-moving",
+          "encoded_value": 13.0
+        },
+        {
+          "value": "Unknown",
+          "label": "Unknown",
+          "encoded_value": 14.0
+        }
+      ]
+    },
+    {
+      "name": "race",
+      "short_name": "race",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "White",
+      "options": [
+        {
+          "value": "Amer-Indian-Eskimo",
+          "label": "Amer-Indian-Eskimo",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "Asian-Pac-Islander",
+          "label": "Asian-Pac-Islander",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "Black",
+          "label": "Black",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "Other",
+          "label": "Other",
+          "encoded_value": 3.0
+        },
+        {
+          "value": "White",
+          "label": "White",
+          "encoded_value": 4.0
+        }
+      ]
+    },
+    {
+      "name": "relationship",
+      "short_name": "relationsh",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "Husband",
+      "options": [
+        {
+          "value": "Husband",
+          "label": "Husband",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "Not-in-family",
+          "label": "Not-in-family",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "Other-relative",
+          "label": "Other-relative",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "Own-child",
+          "label": "Own-child",
+          "encoded_value": 3.0
+        },
+        {
+          "value": "Unmarried",
+          "label": "Unmarried",
+          "encoded_value": 4.0
+        },
+        {
+          "value": "Wife",
+          "label": "Wife",
+          "encoded_value": 5.0
+        }
+      ]
+    },
+    {
+      "name": "sex",
+      "short_name": "sex",
+      "type": "binary",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "Male",
+      "options": [
+        {
+          "value": "Female",
+          "label": "Female",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "Male",
+          "label": "Male",
+          "encoded_value": 1.0
+        }
+      ]
+    },
+    {
+      "name": "workclass",
+      "short_name": "workclass",
+      "type": "categorical",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": "Private",
+      "options": [
+        {
+          "value": "Federal-gov",
+          "label": "Federal-gov",
+          "encoded_value": 0.0
+        },
+        {
+          "value": "Local-gov",
+          "label": "Local-gov",
+          "encoded_value": 1.0
+        },
+        {
+          "value": "Never-worked",
+          "label": "Never-worked",
+          "encoded_value": 2.0
+        },
+        {
+          "value": "Private",
+          "label": "Private",
+          "encoded_value": 3.0
+        },
+        {
+          "value": "Self-emp-inc",
+          "label": "Self-emp-inc",
+          "encoded_value": 4.0
+        },
+        {
+          "value": "Self-emp-not-inc",
+          "label": "Self-emp-not-inc",
+          "encoded_value": 5.0
+        },
+        {
+          "value": "State-gov",
+          "label": "State-gov",
+          "encoded_value": 6.0
+        },
+        {
+          "value": "Unknown",
+          "label": "Unknown",
+          "encoded_value": 7.0
+        },
+        {
+          "value": "Without-pay",
+          "label": "Without-pay",
+          "encoded_value": 8.0
+        }
+      ]
+    }
+  ],
+  "target_column": "target"
+}

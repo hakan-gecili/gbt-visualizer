@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 type UploadPanelProps = {
   sessionId: string | null
+  modelFamily: string | null
   busy: boolean
   onModelUpload: (file: File) => Promise<void>
   onDatasetUpload: (file: File) => Promise<void>
@@ -10,6 +11,7 @@ type UploadPanelProps = {
 
 export function UploadPanel({
   sessionId,
+  modelFamily,
   busy,
   onModelUpload,
   onDatasetUpload,
@@ -42,17 +44,17 @@ export function UploadPanel({
       <div className="eyebrow">Session</div>
       <h1>Gradient Boosting Tree Visualizer</h1>
       <p className="lede">
-        Upload a LightGBM binary classifier, then inspect fixed radial tree geometry and live path
+        Upload a LightGBM or XGBoost binary classifier, then inspect fixed radial tree geometry and live path
         updates in raw margin space.
       </p>
 
       <div className="upload-grid">
         <div className="upload-card">
           <label className="file-card">
-            <span>Model File (.txt)</span>
+            <span>Model File (.txt, .json, .ubj, .bst)</span>
             <input
               type="file"
-              accept=".txt,.model,.lgb,.bst"
+              accept=".txt,.model,.lgb,.json,.ubj,.xgb,.bst,.pkl,.pickle,.joblib"
               onChange={(event) => setModelFile(event.target.files?.[0] ?? null)}
             />
           </label>
@@ -100,7 +102,9 @@ export function UploadPanel({
         </div>
       </div>
 
-      <div className="session-badge">{sessionId ? `session ${sessionId.slice(0, 8)}` : 'no active session'}</div>
+      <div className="session-badge">
+        {sessionId ? `${modelFamily ?? 'model'} session ${sessionId.slice(0, 8)}` : 'no active session'}
+      </div>
     </section>
   )
 }

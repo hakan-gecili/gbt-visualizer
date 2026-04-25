@@ -144,6 +144,54 @@ h2 {
   margin-bottom: 14px;
 }
 
+.examples-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.example-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--line);
+}
+
+.example-group-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.example-variant-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.example-variant-button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--panel-strong);
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.example-variant-button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.example-variant-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .examples-select-label {
   display: block;
   margin-bottom: 8px;
