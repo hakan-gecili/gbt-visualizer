@@ -13,10 +13,14 @@ import type {
   FeatureValue,
 } from '../types/api'
 
-export function uploadModel(modelFile: File) {
+export function uploadModel(modelFile: File, modelFamily?: string) {
+  const formData = createFormData({ model_file: modelFile })
+  if (modelFamily) {
+    formData.append('model_family', modelFamily)
+  }
   return apiFetch<ModelUploadResponse>('/api/model/upload', {
     method: 'POST',
-    body: createFormData({ model_file: modelFile }),
+    body: formData,
   })
 }
 

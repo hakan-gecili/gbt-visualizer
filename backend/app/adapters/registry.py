@@ -4,6 +4,7 @@ from pathlib import Path
 
 from app.adapters.base import ModelAdapter
 from app.adapters.lightgbm_adapter import LightGBMModelAdapter
+from app.adapters.xgboost_adapter import XGBoostModelAdapter
 
 
 class ModelAdapterResolutionError(ValueError):
@@ -12,6 +13,7 @@ class ModelAdapterResolutionError(ValueError):
 
 _REGISTERED_ADAPTERS: tuple[type[ModelAdapter], ...] = (
     LightGBMModelAdapter,
+    XGBoostModelAdapter,
 )
 
 _ADAPTERS_BY_FAMILY: dict[str, type[ModelAdapter]] = {
@@ -39,7 +41,7 @@ def resolve_model_adapter(
     model_family: str | None = None,
 ) -> type[ModelAdapter]:
     if model_family:
-        adapter = _ADAPTERS_BY_FAMILY.get(model_family)
+        adapter = _ADAPTERS_BY_FAMILY.get(model_family.lower())
         if adapter is not None:
             return adapter
         raise ModelAdapterResolutionError(

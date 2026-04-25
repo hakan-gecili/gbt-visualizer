@@ -8,6 +8,7 @@ from app.schemas.common import FeatureImportanceEntry, FeatureMetadata, FeatureV
 
 
 class ModelSummary(BaseModel):
+    model_family: str
     model_type: str
     num_trees: int
     num_features: int
@@ -38,6 +39,7 @@ class TreeLayoutNode(BaseModel):
     is_leaf: bool
     split_feature: str
     threshold: float | str
+    decision_type: str = "<="
     left_child_id: int
     right_child_id: int
     subtree_leaf_count: int
@@ -113,8 +115,23 @@ class DatasetUploadResponse(BaseModel):
     preview: PreviewPayload
 
 
+class ExampleVariant(BaseModel):
+    id: str
+    model_family: str
+    path: str
+    model_file: str
+    has_dataset: bool
+    has_schema: bool
+    metadata: Dict[str, Any] = {}
+
+
+class ExampleDatasetGroup(BaseModel):
+    dataset_name: str
+    variants: List[ExampleVariant]
+
+
 class ExamplesListResponse(BaseModel):
-    examples: List[str]
+    examples: List[ExampleDatasetGroup]
 
 
 class LoadExampleResponse(BaseModel):

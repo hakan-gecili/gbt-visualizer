@@ -1,0 +1,135 @@
+{
+  "features": [
+    {
+      "name": "alcalinity_of_ash",
+      "short_name": "alcalinity",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 10.6,
+      "max_value": 30.0,
+      "default_value": 19.5,
+      "options": []
+    },
+    {
+      "name": "alcohol",
+      "short_name": "alcohol",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 11.03,
+      "max_value": 14.83,
+      "default_value": 13.05,
+      "options": []
+    },
+    {
+      "name": "ash",
+      "short_name": "ash",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 1.36,
+      "max_value": 3.23,
+      "default_value": 2.36,
+      "options": []
+    },
+    {
+      "name": "color_intensity",
+      "short_name": "color_inte",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 1.28,
+      "max_value": 13.0,
+      "default_value": 4.6899999999999995,
+      "options": []
+    },
+    {
+      "name": "flavanoids",
+      "short_name": "flavanoids",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.34,
+      "max_value": 5.08,
+      "default_value": 2.135,
+      "options": []
+    },
+    {
+      "name": "hue",
+      "short_name": "hue",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.48,
+      "max_value": 1.71,
+      "default_value": 0.965,
+      "options": []
+    },
+    {
+      "name": "magnesium",
+      "short_name": "magnesium",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 70.0,
+      "max_value": 162.0,
+      "default_value": 98.0,
+      "options": []
+    },
+    {
+      "name": "malic_acid",
+      "short_name": "malic_acid",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.74,
+      "max_value": 5.8,
+      "default_value": 1.8650000000000002,
+      "options": []
+    },
+    {
+      "name": "nonflavanoid_phenols",
+      "short_name": "nonflavano",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.13,
+      "max_value": 0.66,
+      "default_value": 0.34,
+      "options": []
+    },
+    {
+      "name": "od280/od315_of_diluted_wines",
+      "short_name": "od280/od31",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 1.27,
+      "max_value": 4.0,
+      "default_value": 2.78,
+      "options": []
+    },
+    {
+      "name": "proanthocyanins",
+      "short_name": "proanthocy",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.41,
+      "max_value": 3.58,
+      "default_value": 1.5550000000000002,
+      "options": []
+    },
+    {
+      "name": "proline",
+      "short_name": "proline",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 278.0,
+      "max_value": 1680.0,
+      "default_value": 673.5,
+      "options": []
+    },
+    {
+      "name": "total_phenols",
+      "short_name": "total_phen",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.98,
+      "max_value": 3.88,
+      "default_value": 2.355,
+      "options": []
+    }
+  ],
+  "target_column": "target"
+}

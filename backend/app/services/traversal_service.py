@@ -12,6 +12,10 @@ def _is_missing_branch(feature_value: float, missing_value_strategy: str) -> boo
 
 
 def _take_true_branch(feature_value: float, condition: SplitCondition) -> bool:
+    if condition.operator == "<":
+        if condition.threshold is None:
+            raise ValueError(f"Node for feature '{condition.feature_name}' is missing a numeric threshold.")
+        return feature_value < float(condition.threshold)
     if condition.operator == "<=":
         if condition.threshold is None:
             raise ValueError(f"Node for feature '{condition.feature_name}' is missing a numeric threshold.")

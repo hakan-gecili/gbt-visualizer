@@ -3,5 +3,7 @@ uvicorn
 pydantic
 pandas
 lightgbm
+xgboost
+joblib
 python-multipart
 joblib

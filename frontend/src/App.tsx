@@ -17,6 +17,7 @@ import { fetchExamples, fetchLayout, generateCounterfactual, loadExample, predic
 import type {
   CounterfactualResponse,
   DatasetSummary,
+  ExampleDatasetGroup,
   FeatureImportanceEntry,
   FeatureMetadata,
   FeatureValue,
@@ -40,7 +41,8 @@ function serializeFeatureVector(featureVector: Record<string, FeatureValue>) {
 
 function App() {
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [availableExamples, setAvailableExamples] = useState<string[]>([])
+  const [modelFamily, setModelFamily] = useState<string | null>(null)
+  const [availableExamples, setAvailableExamples] = useState<ExampleDatasetGroup[]>([])
   const [selectedExample, setSelectedExample] = useState('')
   const [featureMetadata, setFeatureMetadata] = useState<FeatureMetadata[]>([])
   const [featureVector, setFeatureVector] = useState<Record<string, FeatureValue>>({})
@@ -121,6 +123,7 @@ function App() {
 
       setSelectedExample('')
       setSessionId(modelResponse.session_id)
+      setModelFamily(modelResponse.model_summary.model_family)
       setFeatureMetadata(modelResponse.feature_metadata)
       setFeatureVector(nextFeatureVector)
       setGlobalFeatureImportance(modelResponse.model_summary.global_feature_importance)
@@ -213,6 +216,7 @@ function App() {
       const nextFeatureVector = buildDefaultFeatureVector(response.feature_metadata)
 
       setSessionId(response.session_id)
+      setModelFamily(response.model_summary.model_family)
       setFeatureMetadata(response.feature_metadata)
       setFeatureVector(nextFeatureVector)
       setGlobalFeatureImportance(response.model_summary.global_feature_importance)
@@ -327,6 +331,7 @@ function App() {
       <aside ref={sidebarRef} className="sidebar">
         <UploadPanel
           sessionId={sessionId}
+          modelFamily={modelFamily}
           busy={busy}
           onModelUpload={handleModelUpload}
           onDatasetUpload={handleDatasetUpload}

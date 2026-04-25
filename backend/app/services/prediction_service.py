@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.adapters.lightgbm_adapter import LightGBMModelAdapter
+from app.adapters.xgboost_adapter import XGBoostModelAdapter
 from app.domain.model_types import EnsembleModel, PredictionResult, sigmoid
 from app.services.feature_schema_service import FeatureValue, encode_feature_vector, prepare_feature_vector
 from app.services.traversal_service import traverse_tree
@@ -24,11 +25,7 @@ def predict_model(
 
     probability = sigmoid(margin)
     predicted_label = int(probability >= model.decision_threshold)
-    local_feature_importance = (
-        LightGBMModelAdapter.compute_local_feature_importance(predictor, model.feature_names, feature_vector)
-        if predictor is not None
-        else []
-    )
+    local_feature_importance = compute_local_feature_importance(model, predictor, feature_vector)
     return prepared_feature_vector, PredictionResult(
         margin=margin,
         probability=probability,
@@ -37,3 +34,17 @@ def predict_model(
         local_feature_importance=local_feature_importance,
         tree_results=tree_results,
     )
+
+
+def compute_local_feature_importance(
+    model: EnsembleModel,
+    predictor: object | None,
+    feature_vector: dict[str, float],
+):
+    if predictor is None:
+        return []
+    if model.model_type.startswith("lightgbm"):
+        return LightGBMModelAdapter.compute_local_feature_importance(predictor, model.feature_names, feature_vector)
+    if model.model_type.startswith("xgboost"):
+        return XGBoostModelAdapter.compute_local_feature_importance(predictor, model.feature_names, feature_vector)
+    return []

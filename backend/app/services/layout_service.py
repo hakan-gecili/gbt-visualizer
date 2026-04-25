@@ -23,6 +23,7 @@ def serialize_layout(model: EnsembleModel) -> dict:
                         "is_leaf": False,
                         "split_feature": node.split_feature,
                         "threshold": node.threshold,
+                        "decision_type": node.decision_type,
                         "left_child_id": node.left_child_id,
                         "right_child_id": node.right_child_id,
                         "subtree_leaf_count": node.subtree_leaf_count,

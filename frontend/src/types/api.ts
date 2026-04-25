@@ -23,6 +23,7 @@ export type FeatureImportanceEntry = {
 }
 
 export type ModelSummary = {
+  model_family: string
   model_type: string
   num_trees: number
   num_features: number
@@ -69,8 +70,23 @@ export type SchemaUploadResponse = {
   preview: PreviewPayload | null
 }
 
+export type ExampleVariant = {
+  id: string
+  model_family: string
+  path: string
+  model_file: string
+  has_dataset: boolean
+  has_schema: boolean
+  metadata: Record<string, unknown>
+}
+
+export type ExampleDatasetGroup = {
+  dataset_name: string
+  variants: ExampleVariant[]
+}
+
 export type ExamplesListResponse = {
-  examples: string[]
+  examples: ExampleDatasetGroup[]
 }
 
 export type LoadExampleResponse = {
@@ -93,6 +109,7 @@ export type TreeLayoutNode = {
   is_leaf: false
   split_feature: string
   threshold: number | string
+  decision_type: string
   left_child_id: number
   right_child_id: number
   subtree_leaf_count: number
