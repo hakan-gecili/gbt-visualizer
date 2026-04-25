@@ -167,3 +167,31 @@ export type SessionMetadataResponse = {
   feature_metadata: FeatureMetadata[]
   dataset_summary: DatasetSummary & { is_loaded: boolean }
 }
+
+export type CounterfactualChange = {
+  feature: string
+  old_value: FeatureValue
+  new_value: FeatureValue
+}
+
+export type CounterfactualStep = Record<string, string | number | boolean | null>
+
+export type CounterfactualCandidate = {
+  new_probability: number
+  new_prediction: number
+  cost: number
+  changes: CounterfactualChange[]
+  steps: CounterfactualStep[]
+  original_num_changes?: number
+  pruned_num_changes?: number
+  removed_changes?: CounterfactualChange[]
+  is_minimal_after_pruning?: boolean
+}
+
+export type CounterfactualResponse = {
+  current_probability: number
+  current_prediction: number
+  threshold: number
+  counterfactuals: CounterfactualCandidate[]
+  runtime_ms: number
+}

@@ -1,5 +1,6 @@
 import { apiFetch, createFormData } from './apiClient'
 import type {
+  CounterfactualResponse,
   DatasetUploadResponse,
   ExamplesListResponse,
   LayoutResponse,
@@ -75,6 +76,26 @@ export function selectDatasetRow(sessionId: string, rowIndex: number) {
     body: JSON.stringify({
       session_id: sessionId,
       row_index: rowIndex,
+    }),
+  })
+}
+
+export function generateCounterfactual(
+  sessionId: string,
+  rowIndex: number,
+  threshold: number,
+  targetClass: number,
+  maxSteps = 3,
+) {
+  return apiFetch<CounterfactualResponse>('/api/counterfactuals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      row_index: rowIndex,
+      threshold,
+      target_class: targetClass,
+      max_steps: maxSteps,
     }),
   })
 }

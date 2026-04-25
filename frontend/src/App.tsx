@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { ContributionChartPanel } from './components/ContributionChartPanel'
+import { CounterfactualPanel } from './components/CounterfactualPanel'
 import { DatasetTable } from './components/DatasetTable'
 import { ExamplesPanel } from './components/ExamplesPanel'
 import { FeatureImportancePanel } from './components/FeatureImportancePanel'
@@ -12,8 +13,9 @@ import { RadialTreeView } from './components/RadialTreeView'
 import { SelectedTreePanel } from './components/SelectedTreePanel'
 import { UploadPanel } from './components/UploadPanel'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
-import { fetchExamples, fetchLayout, loadExample, predict, selectDatasetRow, uploadDataset, uploadFeatureSchema, uploadModel } from './services/model'
+import { fetchExamples, fetchLayout, generateCounterfactual, loadExample, predict, selectDatasetRow, uploadDataset, uploadFeatureSchema, uploadModel } from './services/model'
 import type {
+  CounterfactualResponse,
   DatasetSummary,
   FeatureImportanceEntry,
   FeatureMetadata,
@@ -53,6 +55,9 @@ function App() {
   const [hoveredTreeIndex, setHoveredTreeIndex] = useState<number | null>(null)
   const [selectedTreeIndex, setSelectedTreeIndex] = useState<number | null>(null)
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
+  const [counterfactualResult, setCounterfactualResult] = useState<CounterfactualResponse | null>(null)
+  const [isGeneratingCounterfactual, setIsGeneratingCounterfactual] = useState(false)
+  const [counterfactualError, setCounterfactualError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const predictionRequestIdRef = useRef(0)
@@ -125,6 +130,8 @@ function App() {
       setDatasetSummary(null)
       setPrediction(null)
       setTreeResults([])
+      setCounterfactualResult(null)
+      setCounterfactualError(null)
       setIsFeatureImportanceOpen(false)
       setHoveredTreeIndex(null)
       setSelectedRowIndex(null)
@@ -154,6 +161,8 @@ function App() {
       setFeatureVector(nextFeatureVector)
       setSelectedRowIndex(null)
       setHoveredTreeIndex(null)
+      setCounterfactualResult(null)
+      setCounterfactualError(null)
       appliedFeatureVectorKeyRef.current = ''
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Dataset upload failed.')
@@ -179,6 +188,8 @@ function App() {
       setFeatureVector(nextFeatureVector)
       setSelectedRowIndex(null)
       setHoveredTreeIndex(null)
+      setCounterfactualResult(null)
+      setCounterfactualError(null)
       appliedFeatureVectorKeyRef.current = ''
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Feature schema upload failed.')
@@ -211,6 +222,8 @@ function App() {
       setDatasetSummary(response.dataset_summary)
       setPrediction(null)
       setTreeResults([])
+      setCounterfactualResult(null)
+      setCounterfactualError(null)
       setIsFeatureImportanceOpen(false)
       setHoveredTreeIndex(null)
       setSelectedRowIndex(null)
@@ -244,6 +257,8 @@ function App() {
       setErrorMessage(null)
       setPrediction(response.prediction)
       setTreeResults(response.tree_results)
+      setCounterfactualResult(null)
+      setCounterfactualError(null)
       setHoveredTreeIndex(null)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Row selection failed.')
@@ -253,10 +268,38 @@ function App() {
   function handleFeatureChange(featureName: string, value: FeatureValue) {
     setSelectedRowIndex(null)
     setHoveredTreeIndex(null)
+    setCounterfactualResult(null)
+    setCounterfactualError(null)
     setFeatureVector((current) => ({
       ...current,
       [featureName]: value,
     }))
+  }
+
+  async function handleGenerateCounterfactual() {
+    if (!sessionId || selectedRowIndex === null || !prediction) {
+      return
+    }
+
+    setIsGeneratingCounterfactual(true)
+    setCounterfactualError(null)
+
+    try {
+      const targetClass = prediction.predicted_label === 1 ? 0 : 1
+      const response = await generateCounterfactual(
+        sessionId,
+        selectedRowIndex,
+        prediction.decision_threshold,
+        targetClass,
+        3,
+      )
+      setCounterfactualResult(response)
+    } catch (error) {
+      setCounterfactualResult(null)
+      setCounterfactualError(error instanceof Error ? error.message : 'Counterfactual generation failed.')
+    } finally {
+      setIsGeneratingCounterfactual(false)
+    }
   }
 
   return (
@@ -287,6 +330,16 @@ function App() {
         <PredictionSummary
           prediction={prediction}
           treeResults={treeResults}
+        />
+        <CounterfactualPanel
+          hasSession={sessionId !== null}
+          selectedRowIndex={selectedRowIndex}
+          prediction={prediction}
+          busy={busy}
+          isGenerating={isGeneratingCounterfactual}
+          errorMessage={counterfactualError}
+          result={counterfactualResult}
+          onGenerate={handleGenerateCounterfactual}
         />
         <ContributionChartPanel
           treeResults={treeResults}

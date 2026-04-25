@@ -74,6 +74,7 @@ table {
 .examples-panel,
 .control-panel,
 .prediction-panel,
+.counterfactual-panel,
 .path-panel,
 .dataset-panel,
  .radial-panel,
@@ -88,6 +89,12 @@ table {
 .dataset-panel {
   display: flex;
   flex-direction: column;
+}
+
+.counterfactual-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .eyebrow,
@@ -254,6 +261,76 @@ h2 {
   align-items: center;
   gap: 8px;
   margin-bottom: 0;
+}
+
+.counterfactual-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.counterfactual-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.counterfactual-meta span,
+.counterfactual-change-list li span,
+.empty-inline {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.counterfactual-card,
+.counterfactual-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.counterfactual-status {
+  border-radius: 18px;
+  padding: 16px 18px;
+  background: rgba(34, 129, 126, 0.1);
+  border: 1px solid rgba(34, 129, 126, 0.2);
+  color: #1f5c5a;
+}
+
+.counterfactual-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.counterfactual-change-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.counterfactual-change-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+}
+
+.counterfactual-change-list li strong {
+  font-size: 0.92rem;
+}
+
+.counterfactual-error {
+  padding: 16px 18px;
 }
 
 .feature-list {

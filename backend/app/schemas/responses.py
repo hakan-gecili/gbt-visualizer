@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.common import FeatureImportanceEntry, FeatureMetadata, FeatureValue, LayoutEdge, PredictionSummary, PreviewPayload
 
@@ -146,3 +146,29 @@ class SchemaUploadResponse(BaseModel):
     dataset_summary: MetadataDatasetSummary
     feature_metadata: List[FeatureMetadata]
     preview: Optional[PreviewPayload] = None
+
+
+class CounterfactualChange(BaseModel):
+    feature: str
+    old_value: Any = None
+    new_value: Any = None
+
+
+class CounterfactualCandidate(BaseModel):
+    new_probability: float
+    new_prediction: int
+    cost: float
+    changes: List[CounterfactualChange] = Field(default_factory=list)
+    steps: List[Dict[str, Any]] = Field(default_factory=list)
+    original_num_changes: Optional[int] = None
+    pruned_num_changes: Optional[int] = None
+    removed_changes: List[CounterfactualChange] = Field(default_factory=list)
+    is_minimal_after_pruning: Optional[bool] = None
+
+
+class CounterfactualResponse(BaseModel):
+    current_probability: float
+    current_prediction: int
+    threshold: float
+    counterfactuals: List[CounterfactualCandidate] = Field(default_factory=list)
+    runtime_ms: float
