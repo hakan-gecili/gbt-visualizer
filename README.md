@@ -77,7 +77,7 @@ The goal is to make model behavior transparent, intuitive, and explorable in rea
 
 ```bash
 pip install -r backend/requirements.txt
-uvicorn app.main:app --app-dir backend --reload
+uvicorn app.main:app --app-dir backend --reload --reload-dir backend/app --reload-exclude ".venv/*" --reload-exclude "venv/*" --reload-exclude "__pycache__/*" --reload-exclude "*.pyc"
 ```
 
 ### Frontend
