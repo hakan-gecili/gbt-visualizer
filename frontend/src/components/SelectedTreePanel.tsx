@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { TreeLayout, TreePredictionResult } from '../types/api'
-import { buildHighlightedEdgeSet, findRootNodeId, formatThreshold } from './treeRenderUtils'
+import { buildHighlightedEdgeSet, findRootNodeId, formatNodeCondition } from './treeRenderUtils'
 
 type SelectedTreePanelProps = {
   trees: TreeLayout[]
@@ -254,7 +254,7 @@ export function SelectedTreePanel({
                           {node.split_feature}
                         </text>
                         <text x={point.x} y={point.y + 24} textAnchor="middle" className="detail-threshold-label">
-                          {`≤ ${formatThreshold(node.threshold)}`}
+                          {formatNodeCondition(node)}
                         </text>
                       </g>
                     )

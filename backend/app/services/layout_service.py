@@ -24,6 +24,7 @@ def serialize_layout(model: EnsembleModel) -> dict:
                         "split_feature": node.split_feature,
                         "threshold": node.threshold,
                         "decision_type": node.decision_type,
+                        "category_values": node.condition.category_values,
                         "left_child_id": node.left_child_id,
                         "right_child_id": node.right_child_id,
                         "subtree_leaf_count": node.subtree_leaf_count,

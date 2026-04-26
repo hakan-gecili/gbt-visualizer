@@ -40,6 +40,7 @@ class TreeLayoutNode(BaseModel):
     split_feature: str
     threshold: float | str
     decision_type: str = "<="
+    category_values: List[float] = []
     left_child_id: int
     right_child_id: int
     subtree_leaf_count: int
