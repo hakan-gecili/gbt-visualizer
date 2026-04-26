@@ -43,7 +43,7 @@ export function FeatureControlRow({ feature, value, onChange }: FeatureControlRo
   const featureLabel = feature.name || feature.short_name
 
   return (
-    <div className="feature-row">
+    <div className={feature.type === 'numeric' ? 'feature-row numeric-feature-row' : 'feature-row'}>
       <div className="feature-label" title={feature.name}>
         <span>{featureLabel}</span>
       </div>
@@ -54,7 +54,7 @@ export function FeatureControlRow({ feature, value, onChange }: FeatureControlRo
             const numericValue = typeof effectiveValue === 'number' ? effectiveValue : 0
             const bounds = resolveNumericBounds(feature, typeof value === 'number' ? value : null)
             return (
-              <div className="feature-numeric-stack">
+              <>
                 <input
                   className="feature-slider"
                   type="range"
@@ -73,7 +73,7 @@ export function FeatureControlRow({ feature, value, onChange }: FeatureControlRo
                   disabled={isMissing}
                   onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
                 />
-              </div>
+              </>
             )
           })()
         ) : null}

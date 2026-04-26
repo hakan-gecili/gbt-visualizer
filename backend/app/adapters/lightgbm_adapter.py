@@ -165,8 +165,10 @@ class LightGBMModelAdapter:
 
     @staticmethod
     def _parse_category_values(decision_type: str, threshold: float | str | None) -> list[float]:
-        if decision_type != "==" or not isinstance(threshold, str):
+        if decision_type != "==" or threshold is None:
             return []
+        if isinstance(threshold, (int, float)):
+            return [float(threshold)]
         return [float(item) for item in threshold.split("||") if item != ""]
 
     @staticmethod

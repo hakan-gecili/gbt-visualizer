@@ -110,6 +110,7 @@ export type TreeLayoutNode = {
   split_feature: string
   threshold: number | string
   decision_type: string
+  category_values: number[]
   left_child_id: number
   right_child_id: number
   subtree_leaf_count: number

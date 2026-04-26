@@ -55,7 +55,37 @@ export function formatThreshold(threshold: number | string) {
   return numeric.toFixed(3).replace(/\.?0+$/, '')
 }
 
+function formatCategoryValue(value: number | string) {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (!Number.isNaN(numeric)) {
+    return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, '')
+  }
+  return String(value)
+}
+
+function parseCategoryValues(node: TreeLayoutNode) {
+  if (node.category_values.length) {
+    return node.category_values.map(formatCategoryValue)
+  }
+  if (typeof node.threshold === 'string') {
+    return node.threshold.split('||').filter(Boolean).map(formatCategoryValue)
+  }
+  return [formatCategoryValue(node.threshold)]
+}
+
+export function formatNodeCondition(node: TreeLayoutNode) {
+  if (node.decision_type === '==') {
+    return `in {${parseCategoryValues(node).join(', ')}}`
+  }
+  return `${node.decision_type} ${formatThreshold(node.threshold)}`
+}
+
 export function formatSplitCondition(node: TreeLayoutNode, branchDirection: 'left' | 'right') {
+  if (node.decision_type === '==') {
+    const operator = branchDirection === 'left' ? 'in' : 'not in'
+    return `${node.split_feature} ${operator} {${parseCategoryValues(node).join(', ')}}`
+  }
+
   const operator = node.decision_type === '<' ? (branchDirection === 'left' ? '<' : '≥') : branchDirection === 'left' ? '≤' : '>'
   return `${node.split_feature} ${operator} ${formatThreshold(node.threshold)}`
 }
