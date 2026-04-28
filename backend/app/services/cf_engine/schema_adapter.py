@@ -124,20 +124,9 @@ def encode_feature_series(
         encoded = raw.map(mapping)
         numeric_fallback = pd.to_numeric(raw, errors="coerce")
         encoded = encoded.where(encoded.notna(), numeric_fallback)
-        default = feature.get("default_value")
-        if encoded.isna().any() and default is not None:
-            default_encoded = mapping.get(default, mapping.get(str(default)))
-            if default_encoded is not None:
-                encoded = encoded.fillna(float(default_encoded))
         return encoded.astype(float)
 
     numeric = pd.to_numeric(raw, errors="coerce")
-    default = feature.get("default_value")
-    if numeric.isna().any() and default is not None:
-        try:
-            numeric = numeric.fillna(float(default))
-        except (TypeError, ValueError):
-            pass
     return numeric
 
 

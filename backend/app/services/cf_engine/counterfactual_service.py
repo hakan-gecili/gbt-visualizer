@@ -63,6 +63,12 @@ def _apply_change_units(original_row: pd.DataFrame, units: List[Dict[str, Any]])
     return candidate
 
 
+def _values_differ(old_value: Any, new_value: Any) -> bool:
+    if pd.isna(old_value) and pd.isna(new_value):
+        return False
+    return bool(old_value != new_value)
+
+
 def prune_counterfactual_changes(
     original_row: pd.DataFrame,
     changes: List[Dict[str, Any]],
@@ -178,7 +184,7 @@ class CounterfactualService:
             for feature in self.feature_names:
                 old_value = original[feature]
                 new_value = final[feature]
-                if old_value != new_value:
+                if _values_differ(old_value, new_value):
                     raw_changes.append({"feature": feature, "old_value": old_value, "new_value": new_value})
 
             x_pruned, pruned_raw_changes, removed_raw_changes, is_minimal = prune_counterfactual_changes(

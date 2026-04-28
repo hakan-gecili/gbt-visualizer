@@ -302,6 +302,26 @@ function App() {
     }
   }
 
+  function handleApplyCounterfactualChanges() {
+    const changes = counterfactualResult?.counterfactuals[0]?.changes ?? []
+    if (!changes.length) {
+      return
+    }
+
+    setSelectedRowIndex(null)
+    setHoveredTreeIndex(null)
+    setCounterfactualResult(null)
+    setCounterfactualError(null)
+    appliedFeatureVectorKeyRef.current = ''
+    setFeatureVector((current) => {
+      const nextFeatureVector = { ...current }
+      for (const change of changes) {
+        nextFeatureVector[change.feature] = change.new_value
+      }
+      return nextFeatureVector
+    })
+  }
+
   return (
     <main ref={appShellRef} className="app-shell">
       <aside ref={sidebarRef} className="sidebar">
@@ -340,6 +360,7 @@ function App() {
           errorMessage={counterfactualError}
           result={counterfactualResult}
           onGenerate={handleGenerateCounterfactual}
+          onApplyChanges={handleApplyCounterfactualChanges}
         />
         <ContributionChartPanel
           treeResults={treeResults}

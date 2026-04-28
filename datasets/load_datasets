@@ -1,0 +1,177 @@
+python - << 'EOF'
+from sklearn.datasets import load_diabetes
+import pandas as pd
+# Load dataset
+data = load_diabetes()
+# Create DataFrame
+df = pd.DataFrame(data.data, columns=data.feature_names)
+# Add target column
+df["target"] = data.target
+# Save to CSV
+output_path = "datasets/diabetes/sklearn_diabetes.csv"
+df.to_csv(output_path, index=False)
+print(f"Saved dataset to {output_path}")
+EOF
+
+python - << 'EOF'
+import pandas as pd
+df = pd.read_csv("sklearn_diabetes.csv")
+print(df["target"].median())
+df["target"] = (df["target"] >= 140).astype(int)
+df.to_csv("sklearn_diabetes.csv", index=False)
+EOF
+
+python tools/build_example_from_csv.py \
+  --csv datasets/diabetes/sklearn_diabetes.csv \
+  --target target \
+  --model-family lightgbm \
+  --n-estimators 12 \
+  --max-depth 4 \
+  --output-dir examples/diabetes/lightgbm
+
+### BANK MARKETIN DATA:
+mkdir -p datasets/bank_marketing
+cd datasets/bank_marketing
+
+curl -O https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip
+unzip bank.zip
+
+
+python - << 'EOF'
+import pandas as pd
+df = pd.read_csv("datasets/bank_marketing/bank-full.csv", sep=';')
+df["target"] = (df["y"] == "yes").astype(int)
+df.drop(columns=["y"], inplace=True)
+# Optional: clean column names
+df.columns = [c.strip().replace(" ", "_") for c in df.columns]
+df.to_csv("datasets/bank_marketing/bank_marketing.csv", index=False)
+print("Saved datasets/bank_marketing/bank_marketing.csv")
+EOF
+
+python tools/build_example_from_csv.py \
+  --csv datasets/bank_marketing/bank_marketing.csv \
+  --target target \
+  --model-family lightgbm \
+  --n-estimators 13 \
+  --output-dir examples/bank_marketing/lightgbm
+
+
+python - << 'EOF'
+from sklearn.datasets import load_wine
+import pandas as pd
+# Load dataset
+data = load_wine()
+# Create DataFrame
+df = pd.DataFrame(data.data, columns=data.feature_names)
+# Add target column
+df["target"] = data.target
+df["target_binary"] = (df["target"] == 0).astype(int)
+# Save to CSV
+output_path = "datasets/wine/sklearn_wine.csv"
+df.to_csv(output_path, index=False)
+print(f"Saved dataset to {output_path}")
+EOF
+
+python tools/build_example_from_csv.py \
+  --csv datasets/wine/sklearn_wine.csv \
+  --target target \
+  --model-family lightgbm \
+  --n-estimators 25 \
+  --output-dir examples/wine/lightgbm/wine_25_trees
+
+
+#### TITANIC DATASET:
+
+python - << 'EOF'
+import pandas as pd
+df = pd.read_csv("datasets/titanic/titanic.csv")
+# Rename target
+df.rename(columns={"Survived": "target"}, inplace=True)
+# Drop high-cardinality / useless columns
+df = df.drop(columns=["Name", "Ticket", "Cabin"])
+# Fill missing
+df["Age"] = df["Age"].fillna(df["Age"].median())
+df["Embarked"] = df["Embarked"].fillna(df["Embarked"].mode()[0])
+# Save cleaned dataset
+df.to_csv("datasets/titanic/titanic.csv", index=False)
+print("Saved datasets/titanic/titanic.csv")
+EOF
+
+python tools/build_example_from_csv.py \
+  --csv datasets/titanic/titanic.csv \
+  --target target \
+  --model-family xgboost \
+  --n-estimators 15 \
+  --output-dir examples/titanic/xgboost
+
+##### ADULT INCOME
+
+mkdir -p datasets/adult_income
+cd datasets/adult_income
+curl -O https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data
+curl -O https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.names
+
+python - << 'EOF'
+import pandas as pd
+from pandas.api.types import is_numeric_dtype
+# Column names from adult.names
+columns = [
+    "age", "workclass", "fnlwgt", "education", "education_num",
+    "marital_status", "occupation", "relationship", "race", "sex",
+    "capital_gain", "capital_loss", "hours_per_week", "native_country",
+    "income"
+]
+
+df = pd.read_csv(
+    "datasets/adult_income/adult.csv",
+    names=columns,
+    na_values="?",
+    skipinitialspace=True
+)
+# Clean string-like columns
+
+for col in df.columns:
+
+    if not is_numeric_dtype(df[col]):
+
+        df[col] = df[col].astype("string").str.strip()
+
+# Create binary target
+
+df["target"] = (df["income"] == ">50K").astype(int)
+
+df = df.drop(columns=["income"])
+
+# Fill missing values safely
+for col in df.columns:
+    if is_numeric_dtype(df[col]):
+        df[col] = df[col].fillna(df[col].median())
+    else:
+        df[col] = df[col].fillna("Unknown")
+
+# Optional: drop noisy sample-weight-like column
+# df = df.drop(columns=["fnlwgt"])
+df.to_csv("datasets/adult_income/adult_income.csv", index=False)
+print("Saved datasets/adult_income/adult_income.csv")
+print(df.dtypes)
+print(df.head())
+EOF
+
+
+python tools/build_example_from_csv.py \
+  --csv datasets/adult_income/adult_income.csv \
+  --target target \
+  --model-family lightgbm \
+  --max-depth 4 \
+  --output-dir examples/adult_income/lightgbm
+
+
+### BREAST CANCER
+
+python tools/build_example_from_csv.py \
+  --csv datasets/breast_cancer/sklearn_breast_cancer.csv \
+  --target target \
+  --model-family xgboost \
+  --max-depth 6 \
+  --n-estimators 30 \
+  --output-dir examples/breast_cancer/xgboost

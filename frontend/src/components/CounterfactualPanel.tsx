@@ -9,6 +9,7 @@ type CounterfactualPanelProps = {
   errorMessage: string | null
   result: CounterfactualResponse | null
   onGenerate: () => void
+  onApplyChanges: () => void
 }
 
 function formatValue(value: string | number | null) {
@@ -16,7 +17,7 @@ function formatValue(value: string | number | null) {
     return 'null'
   }
   if (typeof value === 'number') {
-    return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/\.?0+$/, '')
+    return String(value)
   }
   return value
 }
@@ -30,12 +31,14 @@ export function CounterfactualPanel({
   errorMessage,
   result,
   onGenerate,
+  onApplyChanges,
 }: CounterfactualPanelProps) {
   const currentThreshold = prediction?.decision_threshold ?? null
   const currentLabel = prediction?.predicted_label ?? null
   const targetClass = currentLabel === null ? null : currentLabel === 1 ? 0 : 1
   const canGenerate =
     hasSession && selectedRowIndex !== null && currentThreshold !== null && currentLabel !== null && !busy && !isGenerating
+  const canApplyChanges = canGenerate && Boolean(result?.counterfactuals[0]?.changes.length)
 
   function renderBody() {
     if (!hasSession) {
@@ -132,6 +135,9 @@ export function CounterfactualPanel({
         </div>
         <button type="button" className="action-button" disabled={!canGenerate} onClick={onGenerate}>
           {isGenerating ? 'Generating…' : 'Generate Counterfactual'}
+        </button>
+        <button type="button" className="action-button" disabled={!canApplyChanges} onClick={onApplyChanges}>
+          Apply Changes
         </button>
       </div>
       {renderBody()}

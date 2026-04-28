@@ -13,9 +13,10 @@ from app.core.session_store import session_store
 from app.domain.session_types import SessionState
 from app.services.counterfactual_service import generate_counterfactual_for_session, get_session_counterfactual_engine
 from app.services.cf_engine.counterfactual_service import prune_counterfactual_changes
-from app.services.dataset_service import apply_dataset_ranges, load_dataset_from_path, summarize_dataset
+from app.services.dataset_service import apply_dataset_ranges, extract_feature_vector_from_row, load_dataset_from_path, summarize_dataset
 from app.services.feature_schema_service import build_feature_metadata, parse_feature_schema_json
 from app.services.model_loader import load_ensemble_model_from_path
+from app.services.prediction_service import predict_model
 
 
 BREAST_CANCER_OBSERVED_ROW_INDEX = 1
@@ -194,6 +195,99 @@ def _assert_generated_breast_cancer_case_is_pruned() -> None:
     print("breast_cancer_generated_pruned_changes", counterfactual.get("pruned_num_changes"))
 
 
+def _assert_titanic_missing_row_counterfactual_matches_app_prediction() -> None:
+    session = _load_example_session("titanic")
+    assert session.dataset_frame is not None
+
+    row_index = 2
+    threshold = 0.5
+    raw_feature_vector = extract_feature_vector_from_row(session.dataset_frame, row_index, session.feature_metadata)
+    prepared_feature_vector, prediction = predict_model(
+        session.model,
+        session.predictor,
+        session.feature_metadata,
+        raw_feature_vector,
+    )
+    target_class = 1 - int(prediction.predicted_label)
+
+    result = generate_counterfactual_for_session(
+        session.session_id,
+        row_index=row_index,
+        threshold=threshold,
+        target_class=target_class,
+        max_steps=3,
+    )
+
+    if abs(float(result["current_probability"]) - float(prediction.probability)) > 1e-12:
+        raise AssertionError(
+            "Counterfactual service current probability does not match the app prediction path "
+            f"for Titanic row {row_index}: {result['current_probability']} != {prediction.probability}."
+        )
+
+    counterfactuals = result.get("counterfactuals", [])
+    if counterfactuals:
+        replay_vector = dict(prepared_feature_vector)
+        for change in counterfactuals[0].get("changes", []):
+            replay_vector[str(change["feature"])] = change["new_value"]
+        _, replay_prediction = predict_model(
+            session.model,
+            session.predictor,
+            session.feature_metadata,
+            replay_vector,
+        )
+        if int(replay_prediction.predicted_label) != target_class:
+            raise AssertionError(
+                "Returned Titanic counterfactual does not flip under the app prediction path: "
+                f"got {replay_prediction.predicted_label}, expected {target_class}."
+            )
+
+    print("titanic_missing_row_counterfactuals", len(counterfactuals))
+
+
+def _assert_diabetes_precise_counterfactual_matches_app_prediction() -> None:
+    session = _load_example_session("diabetes")
+    assert session.dataset_frame is not None
+
+    row_index = 1
+    threshold = 0.5
+    raw_feature_vector = extract_feature_vector_from_row(session.dataset_frame, row_index, session.feature_metadata)
+    prepared_feature_vector, prediction = predict_model(
+        session.model,
+        session.predictor,
+        session.feature_metadata,
+        raw_feature_vector,
+    )
+    target_class = 1 - int(prediction.predicted_label)
+
+    result = generate_counterfactual_for_session(
+        session.session_id,
+        row_index=row_index,
+        threshold=threshold,
+        target_class=target_class,
+        max_steps=3,
+    )
+    counterfactuals = result.get("counterfactuals", [])
+    if not counterfactuals:
+        raise AssertionError("Expected a generated diabetes counterfactual for row 1.")
+
+    replay_vector = dict(prepared_feature_vector)
+    for change in counterfactuals[0].get("changes", []):
+        replay_vector[str(change["feature"])] = change["new_value"]
+    _, replay_prediction = predict_model(
+        session.model,
+        session.predictor,
+        session.feature_metadata,
+        replay_vector,
+    )
+    if int(replay_prediction.predicted_label) != target_class:
+        raise AssertionError(
+            "Returned diabetes counterfactual does not flip under the app prediction path: "
+            f"got {replay_prediction.predicted_label}, expected {target_class}."
+        )
+
+    print("diabetes_precise_counterfactual_probability", replay_prediction.probability)
+
+
 def main() -> None:
     session = _load_example_session("adult_income")
     threshold = 0.6
@@ -213,6 +307,8 @@ def main() -> None:
     _assert_returned_changes_are_minimal(session.session_id, row_index, result)
     _assert_observed_breast_cancer_case_prunes()
     _assert_generated_breast_cancer_case_is_pruned()
+    _assert_titanic_missing_row_counterfactual_matches_app_prediction()
+    _assert_diabetes_precise_counterfactual_matches_app_prediction()
 
     print("engine_build_ok", True)
     print("cache_hit_ok", True)
