@@ -349,8 +349,50 @@ h2 {
 
 .counterfactual-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 20px;
+  padding: 10px 0 14px;
+}
+
+.counterfactual-metric {
+  display: flex;
+  min-height: 76px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.counterfactual-metric-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.counterfactual-metric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.counterfactual-metric-value strong {
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.counterfactual-metric-value small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .counterfactual-change-list {

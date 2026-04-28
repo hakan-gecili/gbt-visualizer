@@ -13,6 +13,7 @@ from .moves_lookup import build_moves_lookup
 from .schema_adapter import (
     booster_category_maps,
     build_projection_from_schema,
+    categorical_encoded_values,
     category_decoders,
     encode_dataset_for_model,
     load_schema,
@@ -147,7 +148,7 @@ def load_example(example_path: Path | str, force_reload: bool = False) -> Loaded
         schema,
         model_dataset,
         feature_names,
-        {name: sorted(set(mapping.values())) for name, mapping in cat_maps.items()},
+        categorical_encoded_values(schema, feature_names, cat_maps),
     )
 
     loaded = LoadedExample(

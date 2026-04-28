@@ -288,6 +288,132 @@ def _assert_diabetes_precise_counterfactual_matches_app_prediction() -> None:
     print("diabetes_precise_counterfactual_probability", replay_prediction.probability)
 
 
+def _assert_bank_marketing_categorical_counterfactual_is_feature_valid() -> None:
+    session = _load_example_session("bank_marketing")
+    assert session.dataset_frame is not None
+
+    row_index = 29
+    threshold = 0.5
+    raw_feature_vector = extract_feature_vector_from_row(session.dataset_frame, row_index, session.feature_metadata)
+    prepared_feature_vector, prediction = predict_model(
+        session.model,
+        session.predictor,
+        session.feature_metadata,
+        raw_feature_vector,
+    )
+    target_class = 1 - int(prediction.predicted_label)
+
+    result = generate_counterfactual_for_session(
+        session.session_id,
+        row_index=row_index,
+        threshold=threshold,
+        target_class=target_class,
+        max_steps=3,
+    )
+    counterfactuals = result.get("counterfactuals", [])
+    if not counterfactuals:
+        raise AssertionError("Expected a generated bank marketing counterfactual for row 29.")
+
+    features = {str(feature["name"]): feature for feature in session.feature_metadata}
+    replay_vector = dict(prepared_feature_vector)
+    for change in counterfactuals[0].get("changes", []):
+        feature_name = str(change["feature"])
+        feature = features.get(feature_name)
+        if feature is None:
+            raise AssertionError(f"Counterfactual returned unknown feature {feature_name!r}.")
+
+        if str(feature.get("type")) in {"categorical", "binary"}:
+            allowed_values = {str(option["value"]) for option in feature.get("options", [])}
+            new_value = str(change["new_value"])
+            if new_value not in allowed_values:
+                raise AssertionError(
+                    f"Counterfactual returned invalid value {new_value!r} for {feature_name!r}; "
+                    f"expected one of {sorted(allowed_values)}."
+                )
+            if feature_name == "poutcome" and new_value == "entrepreneur":
+                raise AssertionError("poutcome was incorrectly assigned the job value 'entrepreneur'.")
+
+        replay_vector[feature_name] = change["new_value"]
+
+    _, replay_prediction = predict_model(
+        session.model,
+        session.predictor,
+        session.feature_metadata,
+        replay_vector,
+    )
+    counterfactual = counterfactuals[0]
+    if abs(float(replay_prediction.probability) - float(counterfactual["new_probability"])) > 1e-12:
+        raise AssertionError(
+            "Replayed bank marketing counterfactual probability does not match returned result: "
+            f"{replay_prediction.probability} != {counterfactual['new_probability']}."
+        )
+    if int(replay_prediction.predicted_label) != int(counterfactual["new_prediction"]):
+        raise AssertionError(
+            "Replayed bank marketing counterfactual label does not match returned result: "
+            f"{replay_prediction.predicted_label} != {counterfactual['new_prediction']}."
+        )
+
+    print("bank_marketing_counterfactual_changes", counterfactual["changes"])
+
+
+def _assert_adult_income_counterfactual_replays_or_is_absent() -> None:
+    session = _load_example_session("adult_income")
+    assert session.dataset_frame is not None
+
+    row_index = 1
+    threshold = 0.5
+    raw_feature_vector = extract_feature_vector_from_row(session.dataset_frame, row_index, session.feature_metadata)
+    prepared_feature_vector, prediction = predict_model(
+        session.model,
+        session.predictor,
+        session.feature_metadata,
+        raw_feature_vector,
+    )
+    target_class = 1 - int(float(prediction.probability) >= threshold)
+
+    result = generate_counterfactual_for_session(
+        session.session_id,
+        row_index=row_index,
+        threshold=threshold,
+        target_class=target_class,
+        max_steps=3,
+    )
+
+    counterfactuals = result.get("counterfactuals", [])
+    if not counterfactuals:
+        print("adult_income_row_1_counterfactuals", 0)
+        return
+
+    counterfactual = counterfactuals[0]
+    replay_vector = dict(prepared_feature_vector)
+    for change in counterfactual.get("changes", []):
+        if change["feature"] == "education-num" and not float(change["new_value"]).is_integer():
+            raise AssertionError(f"education-num received fractional counterfactual value {change['new_value']!r}.")
+        replay_vector[str(change["feature"])] = change["new_value"]
+
+    _, replay_prediction = predict_model(
+        session.model,
+        session.predictor,
+        session.feature_metadata,
+        replay_vector,
+    )
+    replay_probability = float(replay_prediction.probability)
+    replay_label = int(replay_probability >= threshold)
+    if replay_label != int(counterfactual["new_prediction"]):
+        raise AssertionError(
+            "Replayed adult_income counterfactual label does not match returned result: "
+            f"{replay_label} != {counterfactual['new_prediction']}."
+        )
+    if replay_label != target_class:
+        raise AssertionError(f"Adult income counterfactual did not reach target class {target_class}.")
+    if target_class == 1 and replay_probability < threshold:
+        raise AssertionError(f"Adult income counterfactual probability {replay_probability} did not cross {threshold}.")
+    if target_class == 0 and replay_probability >= threshold:
+        raise AssertionError(f"Adult income counterfactual probability {replay_probability} did not cross below {threshold}.")
+
+    print("adult_income_row_1_counterfactual_probability", replay_probability)
+
+
 def main() -> None:
     session = _load_example_session("adult_income")
     threshold = 0.6
@@ -309,6 +435,8 @@ def main() -> None:
     _assert_generated_breast_cancer_case_is_pruned()
     _assert_titanic_missing_row_counterfactual_matches_app_prediction()
     _assert_diabetes_precise_counterfactual_matches_app_prediction()
+    _assert_bank_marketing_categorical_counterfactual_is_feature_valid()
+    _assert_adult_income_counterfactual_replays_or_is_absent()
 
     print("engine_build_ok", True)
     print("cache_hit_ok", True)

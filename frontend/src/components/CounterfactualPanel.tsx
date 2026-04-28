@@ -76,25 +76,39 @@ export function CounterfactualPanel({
     return (
       <div className="counterfactual-card">
         <div className="counterfactual-stats">
-          <div className="info-card">
-            <span>Current</span>
-            <strong>{result.current_prediction}</strong>
-            <small>{result.current_probability.toFixed(3)}</small>
+          <div className="counterfactual-metric">
+            <span className="counterfactual-metric-label">Current</span>
+            <div className="counterfactual-metric-value">
+              <strong>{result.current_prediction}</strong>
+              <small>{`${(result.current_probability * 100).toFixed(1)}%`}</small>
+            </div>
           </div>
-          <div className="info-card">
-            <span>Counterfactual</span>
-            <strong>{result.counterfactuals[0].new_prediction}</strong>
-            <small>{result.counterfactuals[0].new_probability.toFixed(3)}</small>
+          <div className="counterfactual-metric">
+            <span className="counterfactual-metric-label">Counterfactual</span>
+            <div className="counterfactual-metric-value">
+              <strong>{result.counterfactuals[0].new_prediction}</strong>
+              <small>{`${(result.counterfactuals[0].new_probability * 100).toFixed(1)}%`}</small>
+            </div>
           </div>
-          <div className="info-card">
-            <span>Cost</span>
-            <strong>{result.counterfactuals[0].cost.toFixed(3)}</strong>
-            <small>{`${result.counterfactuals[0].steps.length} steps`}</small>
+          <div className="counterfactual-metric">
+            <span className="counterfactual-metric-label">Cost</span>
+            <div className="counterfactual-metric-value">
+              <strong>{result.counterfactuals[0].cost.toFixed(3)}</strong>
+              <small>{`${result.counterfactuals[0].steps.length} steps`}</small>
+            </div>
           </div>
-          <div className="info-card">
-            <span>Runtime</span>
-            <strong>{`${result.runtime_ms.toFixed(1)} ms`}</strong>
-            <small>{`Threshold ${result.threshold.toFixed(3)}`}</small>
+          <div className="counterfactual-metric">
+            <span className="counterfactual-metric-label">Runtime</span>
+            <div className="counterfactual-metric-value">
+              <strong>{result.runtime_ms.toFixed(1)}</strong>
+              <small>ms</small>
+            </div>
+          </div>
+          <div className="counterfactual-metric">
+            <span className="counterfactual-metric-label">Threshold</span>
+            <div className="counterfactual-metric-value">
+              <strong>{result.threshold.toFixed(3)}</strong>
+            </div>
           </div>
         </div>
 

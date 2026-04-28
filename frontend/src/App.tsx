@@ -39,6 +39,16 @@ function serializeFeatureVector(featureVector: Record<string, FeatureValue>) {
   )
 }
 
+function isValidFeatureValue(feature: FeatureMetadata, value: FeatureValue) {
+  if (value === null) {
+    return feature.missing_allowed
+  }
+  if (feature.type === 'numeric') {
+    return typeof value === 'number' && Number.isFinite(value)
+  }
+  return feature.options.some((option) => option.value === value)
+}
+
 function App() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [modelFamily, setModelFamily] = useState<string | null>(null)
@@ -310,6 +320,17 @@ function App() {
     const changes = counterfactualResult?.counterfactuals[0]?.changes ?? []
     if (!changes.length) {
       return
+    }
+
+    for (const change of changes) {
+      const feature = featureMetadata.find((item) => item.name === change.feature)
+      if (!feature || !isValidFeatureValue(feature, change.new_value)) {
+        const expectedValues = feature?.options.map((option) => option.value).join(', ') ?? 'a known feature'
+        setCounterfactualError(
+          `Cannot apply counterfactual change for ${change.feature}: ${String(change.new_value)} is not valid. Expected ${expectedValues}.`,
+        )
+        return
+      }
     }
 
     setSelectedRowIndex(null)

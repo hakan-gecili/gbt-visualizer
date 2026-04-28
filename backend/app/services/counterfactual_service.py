@@ -9,6 +9,8 @@ import pandas as pd
 from app.core.session_store import session_store
 from app.domain.session_types import SessionState
 from app.services.cf_engine import build_counterfactual_engine
+from app.services.dataset_service import extract_feature_vector_from_row
+from app.services.prediction_service import predict_model
 
 _engine_cache: dict[str, Any] = {}
 
@@ -31,6 +33,8 @@ def build_counterfactual_schema(feature_metadata: list[dict[str, Any]]) -> dict[
     for feature in feature_metadata:
         feature_type = str(feature.get("type", "numeric")).lower()
         normalized_type = "continuous" if feature_type == "numeric" else feature_type
+        if normalized_type == "continuous" and _is_integer_like_feature(feature):
+            normalized_type = "integer"
         features.append(
             {
                 "name": str(feature["name"]),
@@ -43,6 +47,27 @@ def build_counterfactual_schema(feature_metadata: list[dict[str, Any]]) -> dict[
             }
         )
     return {"features": features}
+
+
+def _is_integer_like_feature(feature: dict[str, Any]) -> bool:
+    name = str(feature.get("name", "")).lower()
+    if name.endswith("-num") or name.endswith("_num") or name.endswith(" count") or name.endswith("_count"):
+        return True
+
+    numeric_values = [
+        feature.get("min_value"),
+        feature.get("max_value"),
+        feature.get("default_value"),
+    ]
+    present_values = [value for value in numeric_values if value is not None]
+    return bool(present_values) and all(_is_integer_value(value) for value in present_values)
+
+
+def _is_integer_value(value: Any) -> bool:
+    try:
+        return float(value).is_integer()
+    except (TypeError, ValueError):
+        return False
 
 
 def _build_engine_cache_key(
@@ -158,7 +183,7 @@ def generate_counterfactual_for_session(
     session = session_store.get(session_id)
     dataset = _ensure_session_dataset(session)
     schema = build_counterfactual_schema(session.feature_metadata)
-    return generate_counterfactual(
+    result = generate_counterfactual(
         model=session.model,
         predictor=session.predictor,
         dataset=dataset,
@@ -169,3 +194,65 @@ def generate_counterfactual_for_session(
         max_steps=max_steps,
         key=_build_session_engine_key(session_id, session.model, session.predictor, dataset, schema),
     )
+    return _validate_counterfactual_result_with_app_prediction(
+        session=session,
+        dataset=dataset,
+        result=result,
+        row_index=row_index,
+        threshold=threshold,
+        target_class=target_class,
+    )
+
+
+def _validate_counterfactual_result_with_app_prediction(
+    *,
+    session: SessionState,
+    dataset: pd.DataFrame,
+    result: dict[str, Any],
+    row_index: int,
+    threshold: float,
+    target_class: int | None,
+) -> dict[str, Any]:
+    raw_feature_vector = extract_feature_vector_from_row(dataset, int(row_index), session.feature_metadata)
+    prepared_feature_vector, prediction = predict_model(
+        session.model,
+        session.predictor,
+        session.feature_metadata,
+        raw_feature_vector,
+    )
+    current_probability = float(prediction.probability)
+    current_prediction = int(current_probability >= float(threshold))
+    target = int(1 - current_prediction if target_class is None else target_class)
+
+    validated_counterfactuals: list[dict[str, Any]] = []
+    for counterfactual in result.get("counterfactuals", []):
+        replay_vector = dict(prepared_feature_vector)
+        for change in counterfactual.get("changes", []):
+            replay_vector[str(change["feature"])] = change["new_value"]
+
+        try:
+            _, replay_prediction = predict_model(
+                session.model,
+                session.predictor,
+                session.feature_metadata,
+                replay_vector,
+            )
+        except Exception:
+            continue
+
+        replay_probability = float(replay_prediction.probability)
+        replay_label = int(replay_probability >= float(threshold))
+        if replay_label != target:
+            continue
+
+        validated = dict(counterfactual)
+        validated["new_probability"] = replay_probability
+        validated["new_prediction"] = replay_label
+        validated_counterfactuals.append(validated)
+
+    validated_result = dict(result)
+    validated_result["current_probability"] = current_probability
+    validated_result["current_prediction"] = current_prediction
+    validated_result["threshold"] = float(threshold)
+    validated_result["counterfactuals"] = validated_counterfactuals
+    return validated_result

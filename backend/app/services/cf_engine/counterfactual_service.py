@@ -13,6 +13,7 @@ from .moves_lookup import build_moves_lookup
 from .schema_adapter import (
     booster_category_maps,
     build_projection_from_schema,
+    categorical_encoded_values,
     category_decoders as build_category_decoders,
     encode_dataset_for_model,
 )
@@ -274,7 +275,7 @@ def build_counterfactual_engine(
         schema,
         model_dataset,
         names,
-        {name: sorted(set(mapping.values())) for name, mapping in cat_maps.items()},
+        categorical_encoded_values(schema, names, cat_maps),
     )
 
     return CounterfactualService(

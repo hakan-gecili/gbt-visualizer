@@ -99,15 +99,61 @@ def booster_category_maps(
     cat_idx = 0
     for name in feature_names:
         feature = features.get(name, {})
-        if str(feature.get("type", "")).lower() != "categorical":
+        if str(feature.get("type", "")).lower() not in {"categorical", "binary"}:
             continue
         if cat_idx >= len(pandas_categorical):
             break
         categories = list(pandas_categorical[cat_idx])
+        if not _schema_categories_match_booster_categories(feature, categories):
+            continue
         maps[name] = {value: float(i) for i, value in enumerate(categories)}
         maps[name].update({str(value): float(i) for i, value in enumerate(categories)})
         cat_idx += 1
     return maps
+
+
+def _schema_categories_match_booster_categories(feature: Dict[str, Any], categories: List[Any]) -> bool:
+    schema_values = {
+        str(value)
+        for opt in feature.get("options", []) or []
+        for value in (opt.get("value"), opt.get("label"))
+        if value is not None
+    }
+    booster_values = {str(value) for value in categories}
+    return bool(schema_values) and schema_values.issubset(booster_values)
+
+
+def categorical_encoded_values(
+    schema: Dict[str, Any],
+    feature_names: List[str],
+    category_maps: Optional[Dict[str, Dict[Any, float]]] = None,
+) -> Dict[str, List[float]]:
+    features = feature_by_name(schema)
+    category_maps = category_maps or {}
+    encoded_values: Dict[str, List[float]] = {}
+
+    for name in feature_names:
+        feature = features.get(name, {})
+        if str(feature.get("type", "")).lower() not in {"categorical", "binary"}:
+            continue
+
+        values: List[float] = []
+        mapping = category_maps.get(name)
+        for opt in feature.get("options", []) or []:
+            encoded = None
+            if mapping is not None:
+                encoded = mapping.get(opt.get("value"), mapping.get(str(opt.get("value"))))
+                if encoded is None:
+                    encoded = mapping.get(opt.get("label"), mapping.get(str(opt.get("label"))))
+            if encoded is None and "encoded_value" in opt:
+                encoded = opt["encoded_value"]
+            if encoded is not None:
+                values.append(float(encoded))
+
+        if values:
+            encoded_values[name] = sorted(set(values))
+
+    return encoded_values
 
 
 def encode_feature_series(
