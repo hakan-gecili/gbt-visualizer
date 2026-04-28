@@ -2,6 +2,7 @@ import type { CounterfactualResponse, PredictionSummary as PredictionSummaryType
 
 type CounterfactualPanelProps = {
   hasSession: boolean
+  modelFamily: string | null
   selectedRowIndex: number | null
   prediction: PredictionSummaryType | null
   busy: boolean
@@ -24,6 +25,7 @@ function formatValue(value: string | number | null) {
 
 export function CounterfactualPanel({
   hasSession,
+  modelFamily,
   selectedRowIndex,
   prediction,
   busy,
@@ -36,13 +38,24 @@ export function CounterfactualPanel({
   const currentThreshold = prediction?.decision_threshold ?? null
   const currentLabel = prediction?.predicted_label ?? null
   const targetClass = currentLabel === null ? null : currentLabel === 1 ? 0 : 1
+  const supportsCounterfactuals = ['lightgbm', 'xgboost'].includes((modelFamily ?? '').toLowerCase())
   const canGenerate =
-    hasSession && selectedRowIndex !== null && currentThreshold !== null && currentLabel !== null && !busy && !isGenerating
+    hasSession &&
+    supportsCounterfactuals &&
+    selectedRowIndex !== null &&
+    currentThreshold !== null &&
+    currentLabel !== null &&
+    !busy &&
+    !isGenerating
   const canApplyChanges = canGenerate && Boolean(result?.counterfactuals[0]?.changes.length)
 
   function renderBody() {
     if (!hasSession) {
       return <div className="empty-state">Load a model and start a session before generating counterfactuals.</div>
+    }
+
+    if (!supportsCounterfactuals) {
+      return <div className="empty-state">Counterfactual generation is not available for this model family.</div>
     }
 
     if (selectedRowIndex === null) {
@@ -146,6 +159,7 @@ export function CounterfactualPanel({
           <span>{selectedRowIndex === null ? 'No row selected' : `Row ${selectedRowIndex} selected`}</span>
           <span>{currentThreshold === null ? 'Threshold unavailable' : `Threshold ${currentThreshold.toFixed(2)}`}</span>
           <span>{targetClass === null ? 'Target unavailable' : `Target class ${targetClass}`}</span>
+          <span>{supportsCounterfactuals ? `${modelFamily} counterfactuals` : 'Counterfactuals unavailable'}</span>
         </div>
         <button type="button" className="action-button" disabled={!canGenerate} onClick={onGenerate}>
           {isGenerating ? 'Generating…' : 'Generate Counterfactual'}

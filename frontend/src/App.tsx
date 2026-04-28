@@ -379,6 +379,7 @@ function App() {
         />
         <CounterfactualPanel
           hasSession={sessionId !== null}
+          modelFamily={modelFamily}
           selectedRowIndex={selectedRowIndex}
           prediction={prediction}
           busy={busy}

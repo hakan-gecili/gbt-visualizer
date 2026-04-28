@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from typing import Any
 
 import pandas as pd
@@ -9,8 +10,10 @@ import pandas as pd
 from app.core.session_store import session_store
 from app.domain.session_types import SessionState
 from app.services.cf_engine import build_counterfactual_engine
+from app.services.cf_engine.unified_counterfactual_engine import UnifiedPrediction, generate_unified_counterfactual
 from app.services.dataset_service import extract_feature_vector_from_row
 from app.services.prediction_service import predict_model
+from app.services.xgboost_counterfactual_service import generate_xgboost_counterfactual_for_session as generate_xgboost_counterfactual
 
 _engine_cache: dict[str, Any] = {}
 
@@ -112,18 +115,23 @@ def get_engine(
     cache_key = _build_engine_cache_key(model, predictor, dataset, schema, key=key)
     if cache_key not in _engine_cache:
         engine_model = predictor if predictor is not None else model
-        if (
-            not hasattr(engine_model, "predict_proba")
-            and not hasattr(engine_model, "booster_")
-            and not hasattr(engine_model, "predict")
-        ):
-            raise TypeError("Counterfactual engine requires a LightGBM predictor with predict_proba() or booster_.")
+        if not _is_supported_lightgbm_counterfactual_model(model, engine_model):
+            raise TypeError("Counterfactual generation is currently supported only for LightGBM models.")
         _engine_cache[cache_key] = build_counterfactual_engine(
             model=engine_model,
             dataset=dataset,
             schema=schema,
         )
     return _engine_cache[cache_key]
+
+
+def _is_supported_lightgbm_counterfactual_model(model: Any, engine_model: Any) -> bool:
+    model_type = str(getattr(model, "model_type", "")).lower()
+    if model_type and "lightgbm" not in model_type:
+        return False
+
+    booster = engine_model.booster_ if hasattr(engine_model, "booster_") else engine_model
+    return callable(getattr(booster, "feature_name", None)) and callable(getattr(booster, "dump_model", None))
 
 
 def generate_counterfactual(
@@ -183,6 +191,28 @@ def generate_counterfactual_for_session(
     session = session_store.get(session_id)
     dataset = _ensure_session_dataset(session)
     schema = build_counterfactual_schema(session.feature_metadata)
+    if str(session.model.model_family).lower() == "xgboost":
+        return generate_xgboost_counterfactual(
+            model=session.model,
+            predictor=session.predictor,
+            dataset=dataset,
+            feature_metadata=session.feature_metadata,
+            row_index=row_index,
+            threshold=threshold,
+            target_class=target_class,
+            max_steps=max_steps,
+        )
+    if str(session.model.model_family).lower() != "lightgbm":
+        raise TypeError("Counterfactual generation is currently supported only for LightGBM and XGBoost models.")
+    if _use_unified_counterfactual_for_lightgbm():
+        return _generate_unified_lightgbm_counterfactual_for_session(
+            session=session,
+            dataset=dataset,
+            row_index=row_index,
+            threshold=threshold,
+            target_class=target_class,
+            max_steps=max_steps,
+        )
     result = generate_counterfactual(
         model=session.model,
         predictor=session.predictor,
@@ -201,6 +231,53 @@ def generate_counterfactual_for_session(
         row_index=row_index,
         threshold=threshold,
         target_class=target_class,
+    )
+
+
+def _use_unified_counterfactual_for_lightgbm() -> bool:
+    return str(os.getenv("USE_UNIFIED_CF_FOR_LIGHTGBM", "")).lower() in {"1", "true", "yes", "on"}
+
+
+def _generate_unified_lightgbm_counterfactual_for_session(
+    *,
+    session: SessionState,
+    dataset: pd.DataFrame,
+    row_index: int,
+    threshold: float,
+    target_class: int | None,
+    max_steps: int,
+) -> dict[str, Any]:
+    raw_feature_vector = extract_feature_vector_from_row(dataset, int(row_index), session.feature_metadata)
+    original_vector, _ = predict_model(
+        session.model,
+        session.predictor,
+        session.feature_metadata,
+        raw_feature_vector,
+    )
+
+    def _predict(vector: dict[str, Any]) -> UnifiedPrediction:
+        _, prediction = predict_model(
+            session.model,
+            session.predictor,
+            session.feature_metadata,
+            vector,
+        )
+        probability = float(prediction.probability)
+        return UnifiedPrediction(
+            probability=probability,
+            margin=float(prediction.margin),
+            label=int(probability >= float(threshold)),
+        )
+
+    return generate_unified_counterfactual(
+        model=session.model,
+        feature_metadata=session.feature_metadata,
+        original_vector=original_vector,
+        prediction_evaluator=_predict,
+        threshold=threshold,
+        target_class=target_class,
+        max_steps=max_steps,
+        debug_label="lightgbm-unified",
     )
 
 
@@ -247,6 +324,7 @@ def _validate_counterfactual_result_with_app_prediction(
 
         validated = dict(counterfactual)
         validated["new_probability"] = replay_probability
+        validated["new_margin"] = float(replay_prediction.margin)
         validated["new_prediction"] = replay_label
         validated_counterfactuals.append(validated)
 
