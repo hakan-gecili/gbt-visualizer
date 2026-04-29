@@ -5,6 +5,7 @@ from typing import Any
 import pandas as pd
 
 from app.domain.model_types import EnsembleModel
+from app.services.cf_engine.fast_prediction import select_fast_prediction_evaluator
 from app.services.cf_engine.unified_counterfactual_engine import UnifiedPrediction, generate_unified_counterfactual
 from app.services.dataset_service import extract_feature_vector_from_row
 from app.services.feature_schema_service import FeatureValue
@@ -37,6 +38,7 @@ def generate_xgboost_counterfactual_for_session(
             label=int(probability >= float(threshold)),
         )
 
+    use_fast_evaluator = _use_fast_counterfactual_evaluator()
     return generate_unified_counterfactual(
         model=model,
         feature_metadata=feature_metadata,
@@ -45,5 +47,20 @@ def generate_xgboost_counterfactual_for_session(
         threshold=threshold,
         target_class=target_class,
         max_steps=max_steps,
+        fast_evaluator=select_fast_prediction_evaluator(
+            model=model,
+            predictor=predictor,
+            feature_metadata=feature_metadata,
+            use_fast_evaluator=use_fast_evaluator,
+        ),
+        use_fast_evaluator=use_fast_evaluator,
         debug_label="xgboost",
     )
+
+
+def _use_fast_counterfactual_evaluator() -> bool:
+    import os
+
+    # Native XGBoost prediction is faster but ranking-only; final replay stays
+    # on predict_model through generate_unified_counterfactual().
+    return str(os.getenv("USE_FAST_CF_EVALUATOR", "")).lower() in {"1", "true", "yes", "on"}

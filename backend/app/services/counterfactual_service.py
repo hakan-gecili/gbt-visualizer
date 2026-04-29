@@ -10,6 +10,7 @@ import pandas as pd
 from app.core.session_store import session_store
 from app.domain.session_types import SessionState
 from app.services.cf_engine import build_counterfactual_engine
+from app.services.cf_engine.fast_prediction import select_fast_prediction_evaluator
 from app.services.cf_engine.unified_counterfactual_engine import UnifiedPrediction, generate_unified_counterfactual
 from app.services.dataset_service import extract_feature_vector_from_row
 from app.services.prediction_service import predict_model
@@ -235,7 +236,14 @@ def generate_counterfactual_for_session(
 
 
 def _use_unified_counterfactual_for_lightgbm() -> bool:
+    # Legacy LightGBM remains the default until unified parity gaps are reviewed.
     return str(os.getenv("USE_UNIFIED_CF_FOR_LIGHTGBM", "")).lower() in {"1", "true", "yes", "on"}
+
+
+def _use_fast_counterfactual_evaluator() -> bool:
+    # Enables ranking-only native batch prediction; predict_model remains the
+    # final validator in the unified engine.
+    return str(os.getenv("USE_FAST_CF_EVALUATOR", "")).lower() in {"1", "true", "yes", "on"}
 
 
 def _generate_unified_lightgbm_counterfactual_for_session(
@@ -269,6 +277,7 @@ def _generate_unified_lightgbm_counterfactual_for_session(
             label=int(probability >= float(threshold)),
         )
 
+    use_fast_evaluator = _use_fast_counterfactual_evaluator()
     return generate_unified_counterfactual(
         model=session.model,
         feature_metadata=session.feature_metadata,
@@ -277,6 +286,13 @@ def _generate_unified_lightgbm_counterfactual_for_session(
         threshold=threshold,
         target_class=target_class,
         max_steps=max_steps,
+        fast_evaluator=select_fast_prediction_evaluator(
+            model=session.model,
+            predictor=session.predictor,
+            feature_metadata=session.feature_metadata,
+            use_fast_evaluator=use_fast_evaluator,
+        ),
+        use_fast_evaluator=use_fast_evaluator,
         debug_label="lightgbm-unified",
     )
 

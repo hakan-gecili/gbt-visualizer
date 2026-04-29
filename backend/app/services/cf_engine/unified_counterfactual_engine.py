@@ -8,6 +8,7 @@ from typing import Any, Callable
 import pandas as pd
 
 from app.domain.model_types import EnsembleModel
+from app.services.cf_engine.fast_prediction import FastPredictionEvaluator
 from app.services.cf_engine.normalized_traversal import iter_branch_alternatives
 from app.services.cf_engine.shared_projection import proposals_for_node_branch
 from app.services.cf_engine.shared_scoring import ScoredCandidate, SubtreeSummaryCache, rank_candidates
@@ -46,6 +47,9 @@ def generate_unified_counterfactual(
     target_class: int | None,
     max_steps: int = 3,
     exact_eval_top_n: int | None = None,
+    fast_evaluator: FastPredictionEvaluator | None = None,
+    use_fast_evaluator: bool = False,
+    fast_eval_batch_size: int | None = None,
     debug_label: str = "unified",
 ) -> dict[str, Any]:
     started = time.perf_counter()
@@ -62,16 +66,23 @@ def generate_unified_counterfactual(
     working_vector = dict(original_vector)
     steps: list[dict[str, Any]] = []
     used_updates: set[tuple[str, str]] = set()
-    eval_top_n = int(exact_eval_top_n or _exact_eval_top_n())
+    fast_eval_enabled = bool(use_fast_evaluator and fast_evaluator is not None)
+    eval_top_n = int(
+        exact_eval_top_n or (_fast_exact_eval_top_n() if fast_eval_enabled else _exact_eval_top_n())
+    )
     subtree_summary_cache = SubtreeSummaryCache(model)
 
     total_candidates_generated = 0
     total_candidates_scored = 0
     total_replay_validations = 0
+    total_fast_scored = 0
     fallback_used = False
+    fast_fallback_used = False
     scoring_seconds = 0.0
+    fast_scoring_seconds = 0.0
     replay_seconds = 0.0
     top_ranked_features: list[str] = []
+    fast_batch_size = int(fast_eval_batch_size or _fast_eval_batch_size())
 
     for step_index in range(int(max_steps)):
         prediction_before = prediction_evaluator(working_vector)
@@ -95,6 +106,28 @@ def generate_unified_counterfactual(
         )
         scoring_seconds += time.perf_counter() - scoring_started
         total_candidates_scored += len(ranked_candidates)
+
+        if fast_eval_enabled and ranked_candidates:
+            # The fast evaluator is a ranking hint only. Candidates still pass
+            # through _evaluate_ranked_candidates, which calls prediction_evaluator
+            # backed by the app's normal predict_model path.
+            fast_ranked_started = time.perf_counter()
+            try:
+                ranked_candidates, fast_scored = _rank_candidates_with_fast_evaluator(
+                    ranked_candidates=ranked_candidates,
+                    fast_evaluator=fast_evaluator,
+                    working_vector=working_vector,
+                    used_updates=used_updates,
+                    probability_before=probability_before,
+                    threshold=float(threshold),
+                    target=target,
+                    batch_size=fast_batch_size,
+                )
+                total_fast_scored += fast_scored
+            except Exception:
+                fast_fallback_used = True
+            fast_scoring_seconds += time.perf_counter() - fast_ranked_started
+
         if step_index == 0:
             top_ranked_features = [str(item.candidate.feature) for item in ranked_candidates[:10]]
 
@@ -208,11 +241,17 @@ def generate_unified_counterfactual(
         "candidate_count": total_candidates_generated,
         "candidates_generated": total_candidates_generated,
         "candidates_scored": total_candidates_scored,
+        "fast_evaluator_enabled": fast_eval_enabled,
+        "fast_evaluator_type": type(fast_evaluator).__name__ if fast_eval_enabled else None,
+        "fast_eval_batch_size": fast_batch_size if fast_eval_enabled else None,
+        "fast_scored_candidates": total_fast_scored,
         "exact_eval_top_n": eval_top_n,
         "replay_validations": total_replay_validations,
         "replay_count": total_replay_validations,
         "fallback_used": fallback_used,
+        "fast_fallback_used": fast_fallback_used,
         "scoring_ms": 1000.0 * scoring_seconds,
+        "fast_scoring_ms": 1000.0 * fast_scoring_seconds,
         "replay_ms": 1000.0 * replay_seconds,
         "top_ranked_features": top_ranked_features,
     }
@@ -221,10 +260,16 @@ def generate_unified_counterfactual(
             f"[counterfactual:{debug_label}] "
             f"candidates_generated={total_candidates_generated} "
             f"candidates_scored={total_candidates_scored} "
+            f"use_fast_evaluator={fast_eval_enabled} "
+            f"fast_evaluator_type={type(fast_evaluator).__name__ if fast_eval_enabled else None} "
+            f"fast_scored_candidates={total_fast_scored} "
+            f"fast_eval_batch_size={fast_batch_size if fast_eval_enabled else None} "
             f"exact_eval_top_n={eval_top_n} "
             f"replay_validations={total_replay_validations} "
             f"fallback_used={fallback_used} "
+            f"fast_fallback_used={fast_fallback_used} "
             f"scoring_ms={1000.0 * scoring_seconds:.3f} "
+            f"fast_scoring_ms={1000.0 * fast_scoring_seconds:.3f} "
             f"replay_ms={1000.0 * replay_seconds:.3f} "
             f"total_ms={runtime_ms:.3f}"
         )
@@ -320,6 +365,73 @@ def _evaluate_ranked_candidates(
     return evaluated, replay_validations, time.perf_counter() - started
 
 
+def _rank_candidates_with_fast_evaluator(
+    *,
+    ranked_candidates: list[ScoredCandidate],
+    fast_evaluator: FastPredictionEvaluator,
+    working_vector: dict[str, FeatureValue],
+    used_updates: set[tuple[str, str]],
+    probability_before: float,
+    threshold: float,
+    target: int,
+    batch_size: int,
+) -> tuple[list[ScoredCandidate], int]:
+    scored_items: list[tuple[float, float, float, float, int, ScoredCandidate]] = []
+    pending_rows: list[dict[str, FeatureValue]] = []
+    pending_candidates: list[ScoredCandidate] = []
+    original_positions: list[int] = []
+    skipped: list[tuple[int, ScoredCandidate]] = []
+    fast_scored = 0
+
+    def _flush() -> None:
+        nonlocal fast_scored
+        if not pending_rows:
+            return
+        prediction = fast_evaluator.predict_batch(pending_rows, threshold=threshold)
+        fast_scored += len(pending_rows)
+        for offset, scored_candidate in enumerate(pending_candidates):
+            candidate = scored_candidate.candidate
+            probability = float(prediction.probabilities[offset])
+            delta_probability = probability - probability_before
+            direction = delta_probability if target == 1 else -delta_probability
+            score = direction / max(float(candidate.cost), 1e-12)
+            target_match = int(prediction.labels[offset]) == int(target)
+            scored_items.append(
+                (
+                    1.0 if target_match else 0.0,
+                    score,
+                    direction,
+                    -float(candidate.cost),
+                    # Preserve normalized tree ranking when fast scores tie.
+                    -original_positions[offset],
+                    scored_candidate,
+                )
+            )
+        pending_rows.clear()
+        pending_candidates.clear()
+        original_positions.clear()
+
+    for position, scored_candidate in enumerate(ranked_candidates):
+        candidate = scored_candidate.candidate
+        update_key = (candidate.feature, repr(candidate.new_value))
+        if update_key in used_updates:
+            skipped.append((position, scored_candidate))
+            continue
+        trial_vector = dict(working_vector)
+        trial_vector[candidate.feature] = candidate.new_value
+        pending_rows.append(trial_vector)
+        pending_candidates.append(scored_candidate)
+        original_positions.append(position)
+        if len(pending_rows) >= max(int(batch_size), 1):
+            _flush()
+    _flush()
+
+    scored_items.sort(key=lambda item: item[:5], reverse=True)
+    reordered = [item[5] for item in scored_items]
+    reordered.extend(scored_candidate for _, scored_candidate in sorted(skipped, key=lambda item: item[0]))
+    return reordered, fast_scored
+
+
 def _prune_changes(
     *,
     prediction_evaluator: PredictionEvaluator,
@@ -394,3 +506,27 @@ def _exact_eval_top_n() -> int:
         return max(int(raw_value), 1)
     except ValueError:
         return 64
+
+
+def _fast_eval_batch_size() -> int:
+    # Optional tuning knob for USE_FAST_CF_EVALUATOR=1. Large batches reduce
+    # native predictor setup overhead without changing final validation.
+    raw_value = os.getenv("COUNTERFACTUAL_FAST_EVAL_BATCH_SIZE")
+    if raw_value is None:
+        return 512
+    try:
+        return max(int(raw_value), 1)
+    except ValueError:
+        return 512
+
+
+def _fast_exact_eval_top_n() -> int:
+    # With fast pre-screening enabled, try a smaller exact replay window first.
+    # If it misses, the existing fallback replays the remaining candidates.
+    raw_value = os.getenv("COUNTERFACTUAL_FAST_EXACT_EVAL_TOP_N")
+    if raw_value is None:
+        return 8
+    try:
+        return max(int(raw_value), 1)
+    except ValueError:
+        return 8
