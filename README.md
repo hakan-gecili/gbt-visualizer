@@ -27,6 +27,40 @@ explorable in real time**.
 
 ------------------------------------------------------------------------
 
+## 🆕 Version 3
+
+Version 3 adds counterfactuals and makes the app interactive beyond visualization.
+
+### Counterfactuals
+- Generate feature changes that flip predictions  
+- Works for both **LightGBM** and **XGBoost**  
+- Uses the current feature values (not just dataset rows)
+
+### Threshold Control
+- Threshold is user-controlled (0.0–1.0)  
+- Predictions and counterfactuals use this value  
+
+### Counterfactual Paths
+- Shows the actual path after applying counterfactual changes  
+- Differences from current path are visible  
+- Also rendered on:
+  - Radial tree view  
+  - Selected tree panel  
+
+### Performance
+- Faster counterfactual evaluation using batch prediction  
+- Enabled with:
+
+```
+USE_FAST_CF_EVALUATOR=1
+```
+
+### LightGBM Improvement
+- Replaced fixed search limit with adaptive search steps  
+- Finds counterfactuals more reliably  
+
+------------------------------------------------------------------------
+
 ## 🚀 Key Features
 
 ### 🌳 Radial Tree Visualization
