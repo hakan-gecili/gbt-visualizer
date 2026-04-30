@@ -17,6 +17,7 @@ async def generate_counterfactual(request: CounterfactualRequest) -> Counterfact
             row_index=request.row_index,
             threshold=request.threshold,
             target_class=request.target_class,
+            feature_vector=request.feature_vector,
             max_steps=request.max_steps,
         )
         return CounterfactualResponse(**result)

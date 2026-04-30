@@ -26,3 +26,4 @@ class SessionState:
         }
     )
     preview: Optional[Dict[str, Any]] = None
+    counterfactual_metadata: Dict[str, Any] = field(default_factory=dict)

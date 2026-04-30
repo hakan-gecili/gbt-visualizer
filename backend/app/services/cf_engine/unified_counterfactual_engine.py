@@ -53,7 +53,7 @@ def generate_unified_counterfactual(
     debug_label: str = "unified",
 ) -> dict[str, Any]:
     started = time.perf_counter()
-    if not 0.0 < float(threshold) < 1.0:
+    if not 0.0 <= float(threshold) <= 1.0:
         raise ValueError("threshold must be between 0 and 1")
 
     original_prediction = prediction_evaluator(dict(original_vector))

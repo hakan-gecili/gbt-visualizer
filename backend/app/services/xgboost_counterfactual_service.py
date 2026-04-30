@@ -22,11 +22,16 @@ def generate_xgboost_counterfactual_for_session(
     threshold: float,
     target_class: int | None,
     max_steps: int = 3,
+    feature_vector: dict[str, FeatureValue] | None = None,
 ) -> dict[str, Any]:
     if not 0 <= int(row_index) < len(dataset):
         raise IndexError(f"row_index out of range; dataset has {len(dataset)} rows")
 
-    raw_feature_vector = extract_feature_vector_from_row(dataset, int(row_index), feature_metadata)
+    raw_feature_vector = (
+        feature_vector
+        if feature_vector is not None
+        else extract_feature_vector_from_row(dataset, int(row_index), feature_metadata)
+    )
     original_vector, _ = predict_model(model, predictor, feature_metadata, raw_feature_vector)
 
     def _predict(vector: dict[str, FeatureValue]) -> UnifiedPrediction:

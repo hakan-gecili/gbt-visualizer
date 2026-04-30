@@ -7,6 +7,7 @@ import { buildHighlightedEdgeSet, buildTreePointMap, findRootNodeId } from './tr
 type RadialTreeViewProps = {
   trees: TreeLayout[]
   treeResults: TreePredictionResult[]
+  counterfactualPathEdgeMap: Map<number, Set<string>>
   panelScale: number
   onPanelScaleChange: (value: number) => void
   hoveredTreeIndex: number | null
@@ -67,6 +68,7 @@ function treeLabelIndices(numTrees: number) {
 export function RadialTreeView({
   trees,
   treeResults,
+  counterfactualPathEdgeMap,
   panelScale,
   onPanelScaleChange,
   hoveredTreeIndex,
@@ -126,24 +128,49 @@ export function RadialTreeView({
                   key={`sector-${tree.tree_index}`}
                   d={sectorPath(tree.sector_start_angle, tree.sector_end_angle, SCALE * 0.06, SCALE * 1.02)}
                   className={
-                    hoveredTreeIndex === tree.tree_index || selectedTreeIndex === tree.tree_index
+                    hoveredTreeIndex === tree.tree_index
                       ? 'sector-fill active'
                       : 'sector-fill'
                   }
                   style={{
                     fill:
-                      hoveredTreeIndex === tree.tree_index || selectedTreeIndex === tree.tree_index
+                      hoveredTreeIndex === tree.tree_index
                         ? theme.sectorActiveFill
                         : theme.sectorFill,
                     stroke:
-                      hoveredTreeIndex === tree.tree_index || selectedTreeIndex === tree.tree_index
+                      hoveredTreeIndex === tree.tree_index
                         ? theme.sectorActiveStroke
                         : theme.sectorStroke,
-                    strokeWidth: selectedTreeIndex === tree.tree_index ? 2.4 : 1.2,
+                    strokeWidth: hoveredTreeIndex === tree.tree_index ? 2 : 1.2,
                   }}
                   onClick={() => onSelectTree(tree.tree_index)}
                 />
               ))}
+
+              {selectedTreeIndex !== null
+                ? trees
+                    .filter((tree) => tree.tree_index === selectedTreeIndex)
+                    .map((tree) => {
+                      const midAngle = (tree.sector_start_angle + tree.sector_end_angle) * 0.5
+                      const starRadius = SCALE * 1.14
+                      const starX = CENTER + Math.cos(midAngle) * starRadius
+                      const starY = CENTER + Math.sin(midAngle) * starRadius
+                      return (
+                        <text
+                          key={`selected-star-${tree.tree_index}`}
+                          x={starX}
+                          y={starY}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          className="selected-tree-star"
+                          fill={theme.label}
+                          onClick={() => onSelectTree(tree.tree_index)}
+                        >
+                          ★
+                        </text>
+                      )
+                    })
+                : null}
 
               {trees.map((tree) => {
               const treeResult = treeResultMap.get(tree.tree_index)
@@ -189,42 +216,50 @@ export function RadialTreeView({
               const treeResult = treeResultMap.get(tree.tree_index)
               const activePathNodeIds = new Set(treeResult?.active_path_node_ids ?? [])
               const highlightedEdges = buildHighlightedEdgeSet(treeResult)
+              const counterfactualEdges = counterfactualPathEdgeMap.get(tree.tree_index) ?? new Set<string>()
+
+              const renderEdgeLine = (
+                edge: TreeLayout['edges'][number],
+                className: string,
+                stroke: string,
+                strokeWidth: number,
+                keyPrefix: string,
+              ) => {
+                const source =
+                  edge.source_id === rootNodeId
+                    ? { x: CENTER, y: CENTER }
+                    : pointMap.get(edge.source_id)
+                const target = pointMap.get(edge.target_id)
+                if (!source || !target) {
+                  return null
+                }
+                const scaledSource = edge.source_id === rootNodeId
+                  ? source
+                  : { x: CENTER + source.x * SCALE, y: CENTER + source.y * SCALE }
+                const scaledTarget = { x: CENTER + target.x * SCALE, y: CENTER + target.y * SCALE }
+
+                return (
+                  <line
+                    key={`${keyPrefix}-${edge.source_id}-${edge.target_id}`}
+                    x1={scaledSource.x}
+                    y1={scaledSource.y}
+                    x2={scaledTarget.x}
+                    y2={scaledTarget.y}
+                    className={className}
+                    style={{ stroke, strokeWidth }}
+                  />
+                )
+              }
 
               return (
                 <g key={`tree-${tree.tree_index}`}>
-                  {tree.edges.map((edge) => {
-                    const source =
-                      edge.source_id === rootNodeId
-                        ? { x: CENTER, y: CENTER }
-                        : pointMap.get(edge.source_id)
-                    const target = pointMap.get(edge.target_id)
-                    if (!source || !target) {
-                      return null
-                    }
-                    const scaledSource = edge.source_id === rootNodeId
-                      ? source
-                      : { x: CENTER + source.x * SCALE, y: CENTER + source.y * SCALE }
-                    const scaledTarget = { x: CENTER + target.x * SCALE, y: CENTER + target.y * SCALE }
-
-                    const highlighted =
-                      hoveredTreeIndex === tree.tree_index ||
-                      selectedTreeIndex === tree.tree_index ||
-                      highlightedEdges.has(`${edge.source_id}-${edge.target_id}`)
-                    return (
-                      <line
-                        key={`${edge.source_id}-${edge.target_id}`}
-                        x1={scaledSource.x}
-                        y1={scaledSource.y}
-                        x2={scaledTarget.x}
-                        y2={scaledTarget.y}
-                        className={highlighted ? 'edge-line active' : 'edge-line'}
-                        style={{
-                          stroke: highlighted ? theme.edgeActive : theme.edge,
-                          strokeWidth: highlighted && !isDarkMode ? 2.1 : 1.4,
-                        }}
-                      />
-                    )
-                  })}
+                  {tree.edges.map((edge) => renderEdgeLine(edge, 'edge-line', theme.edge, 1.4, 'edge'))}
+                  {tree.edges
+                    .filter((edge) => counterfactualEdges.has(`${edge.source_id}-${edge.target_id}`))
+                    .map((edge) => renderEdgeLine(edge, 'edge-line counterfactual', '#FF00FF', 1.9, 'cf-edge'))}
+                  {tree.edges
+                    .filter((edge) => highlightedEdges.has(`${edge.source_id}-${edge.target_id}`))
+                    .map((edge) => renderEdgeLine(edge, 'edge-line active', theme.edgeActive, !isDarkMode ? 2.1 : 1.9, 'active-edge'))}
 
                   {tree.nodes
                     .filter((node) => node.node_id !== rootNodeId)
@@ -243,10 +278,7 @@ export function RadialTreeView({
                     })}
 
                   {tree.leaves.map((leaf) => {
-                    const highlighted =
-                      hoveredTreeIndex === tree.tree_index ||
-                      selectedTreeIndex === tree.tree_index ||
-                      leaf.leaf_id === treeResult?.selected_leaf_id
+                    const highlighted = leaf.leaf_id === treeResult?.selected_leaf_id
                     return (
                       <circle
                         key={`leaf-${tree.tree_index}-${leaf.leaf_id}`}

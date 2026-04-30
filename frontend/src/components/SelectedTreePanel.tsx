@@ -7,6 +7,7 @@ type SelectedTreePanelProps = {
   trees: TreeLayout[]
   treeResults: TreePredictionResult[]
   selectedTreeIndex: number | null
+  counterfactualPathEdgeMap: Map<number, Set<string>>
 }
 
 type Point = {
@@ -92,6 +93,7 @@ export function SelectedTreePanel({
   trees,
   treeResults,
   selectedTreeIndex,
+  counterfactualPathEdgeMap,
 }: SelectedTreePanelProps) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   const [panY, setPanY] = useState(DEFAULT_PAN_Y)
@@ -159,8 +161,9 @@ export function SelectedTreePanel({
       ...layout,
       activePathNodeIds: new Set(treeResult?.active_path_node_ids ?? []),
       highlightedEdges: buildHighlightedEdgeSet(treeResult),
+      counterfactualEdges: counterfactualPathEdgeMap.get(selectedTree.tree_index) ?? new Set<string>(),
     }
-  }, [selectedTree, treeResult])
+  }, [counterfactualPathEdgeMap, selectedTree, treeResult])
 
   const handleBackgroundMouseDown = (event: React.MouseEvent<SVGRectElement>) => {
     if (event.button !== 0) {
@@ -222,7 +225,6 @@ export function SelectedTreePanel({
                     if (!source || !target) {
                       return null
                     }
-                    const isActive = detailPayload.highlightedEdges.has(`${edge.source_id}-${edge.target_id}`)
                     return (
                       <line
                         key={`detail-edge-${edge.source_id}-${edge.target_id}`}
@@ -230,10 +232,50 @@ export function SelectedTreePanel({
                         y1={source.y}
                         x2={target.x}
                         y2={target.y}
-                        className={isActive ? 'detail-edge active' : 'detail-edge'}
+                        className="detail-edge"
                       />
                     )
                   })}
+
+                  {selectedTree.edges
+                    .filter((edge) => detailPayload.counterfactualEdges.has(`${edge.source_id}-${edge.target_id}`))
+                    .map((edge) => {
+                      const source = detailPayload.pointMap.get(edge.source_id)
+                      const target = detailPayload.pointMap.get(edge.target_id)
+                      if (!source || !target) {
+                        return null
+                      }
+                      return (
+                        <line
+                          key={`detail-counterfactual-edge-${edge.source_id}-${edge.target_id}`}
+                          x1={source.x}
+                          y1={source.y}
+                          x2={target.x}
+                          y2={target.y}
+                          className="detail-edge counterfactual"
+                        />
+                      )
+                    })}
+
+                  {selectedTree.edges
+                    .filter((edge) => detailPayload.highlightedEdges.has(`${edge.source_id}-${edge.target_id}`))
+                    .map((edge) => {
+                      const source = detailPayload.pointMap.get(edge.source_id)
+                      const target = detailPayload.pointMap.get(edge.target_id)
+                      if (!source || !target) {
+                        return null
+                      }
+                      return (
+                        <line
+                          key={`detail-active-edge-${edge.source_id}-${edge.target_id}`}
+                          x1={source.x}
+                          y1={source.y}
+                          x2={target.x}
+                          y2={target.y}
+                          className="detail-edge active"
+                        />
+                      )
+                    })}
 
                   {selectedTree.nodes.map((node) => {
                     const point = detailPayload.pointMap.get(node.node_id)

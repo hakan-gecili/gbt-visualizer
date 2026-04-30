@@ -4,13 +4,17 @@ import { FeatureControlRow } from './FeatureControlRow'
 type FeatureControlPanelProps = {
   featureMetadata: FeatureMetadata[]
   featureVector: Record<string, FeatureValue>
+  canResetToRowValues: boolean
   onFeatureChange: (featureName: string, value: FeatureValue) => void
+  onResetToRowValues: () => void
 }
 
 export function FeatureControlPanel({
   featureMetadata,
   featureVector,
+  canResetToRowValues,
   onFeatureChange,
+  onResetToRowValues,
 }: FeatureControlPanelProps) {
   const typeSummary = featureMetadata.reduce(
     (counts, feature) => {
@@ -23,10 +27,15 @@ export function FeatureControlPanel({
   return (
     <section className="panel control-panel">
       <div className="panel-header">
-        <h2>Feature Controls</h2>
-        <span className="panel-caption">
-          {`${featureMetadata.length} inputs · ${typeSummary.numeric} numeric · ${typeSummary.binary} binary · ${typeSummary.categorical} categorical`}
-        </span>
+        <div>
+          <h2>Feature Controls</h2>
+          <span className="panel-caption">
+            {`${featureMetadata.length} inputs · ${typeSummary.numeric} numeric · ${typeSummary.binary} binary · ${typeSummary.categorical} categorical`}
+          </span>
+        </div>
+        <button type="button" className="ghost-button" disabled={!canResetToRowValues} onClick={onResetToRowValues}>
+          Reset to row values
+        </button>
       </div>
       <div className="feature-list">
         {featureMetadata.map((feature) => (

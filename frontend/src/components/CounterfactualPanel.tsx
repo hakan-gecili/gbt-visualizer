@@ -4,6 +4,7 @@ type CounterfactualPanelProps = {
   hasSession: boolean
   modelFamily: string | null
   selectedRowIndex: number | null
+  isFeatureVectorEdited: boolean
   prediction: PredictionSummaryType | null
   busy: boolean
   isGenerating: boolean
@@ -27,6 +28,7 @@ export function CounterfactualPanel({
   hasSession,
   modelFamily,
   selectedRowIndex,
+  isFeatureVectorEdited,
   prediction,
   busy,
   isGenerating,
@@ -39,6 +41,12 @@ export function CounterfactualPanel({
   const currentLabel = prediction?.predicted_label ?? null
   const targetClass = currentLabel === null ? null : currentLabel === 1 ? 0 : 1
   const supportsCounterfactuals = ['lightgbm', 'xgboost'].includes((modelFamily ?? '').toLowerCase())
+  const startingPointText =
+    selectedRowIndex === null
+      ? 'No row selected'
+      : isFeatureVectorEdited
+        ? `Starting point: Edited feature values (from row ${selectedRowIndex})`
+        : `Starting point: Dataset row ${selectedRowIndex}`
   const canGenerate =
     hasSession &&
     supportsCounterfactuals &&
@@ -67,7 +75,7 @@ export function CounterfactualPanel({
     }
 
     if (isGenerating) {
-      return <div className="counterfactual-status">Generating counterfactual for the selected row…</div>
+      return <div className="counterfactual-status">Generating counterfactual from the current feature values…</div>
     }
 
     if (errorMessage) {
@@ -77,13 +85,13 @@ export function CounterfactualPanel({
     if (!result) {
       return (
         <div className="empty-state">
-          Generate a counterfactual using the current row, current threshold, and the opposite predicted class.
+          Generate a counterfactual using the current feature values, current threshold, and the opposite predicted class.
         </div>
       )
     }
 
     if (result.counterfactuals.length === 0) {
-      return <div className="empty-state">No counterfactual was found for this row within `max_steps = 3`.</div>
+      return <div className="empty-state">No counterfactual was found for this row within the configured search limit.</div>
     }
 
     return (
@@ -149,24 +157,30 @@ export function CounterfactualPanel({
       <div className="panel-header">
         <div>
           <h2>Counterfactual</h2>
-          <span className="panel-caption">Generate a minimal flip for the selected dataset row</span>
+          <span className="panel-caption">Generate a minimal flip from the current feature values</span>
         </div>
       </div>
 
       <div className="counterfactual-actions">
         <div className="counterfactual-meta">
-          <span>{hasSession ? 'Session active' : 'No active session'}</span>
-          <span>{selectedRowIndex === null ? 'No row selected' : `Row ${selectedRowIndex} selected`}</span>
-          <span>{currentThreshold === null ? 'Threshold unavailable' : `Threshold ${currentThreshold.toFixed(2)}`}</span>
-          <span>{targetClass === null ? 'Target unavailable' : `Target class ${targetClass}`}</span>
-          <span>{supportsCounterfactuals ? `${modelFamily} counterfactuals` : 'Counterfactuals unavailable'}</span>
+          <div className="counterfactual-meta-row">
+            <span>{hasSession ? 'Session active' : 'No active session'}</span>
+            <span>{startingPointText}</span>
+          </div>
+          <div className="counterfactual-meta-row">
+            <span>{currentThreshold === null ? 'Threshold unavailable' : `Threshold ${currentThreshold.toFixed(3)}`}</span>
+            <span>{targetClass === null ? 'Target unavailable' : `Target class ${targetClass}`}</span>
+            <span>{supportsCounterfactuals ? `${modelFamily} counterfactuals` : 'Counterfactuals unavailable'}</span>
+          </div>
         </div>
-        <button type="button" className="action-button" disabled={!canGenerate} onClick={onGenerate}>
-          {isGenerating ? 'Generating…' : 'Generate Counterfactual'}
-        </button>
-        <button type="button" className="action-button" disabled={!canApplyChanges} onClick={onApplyChanges}>
-          Apply Changes
-        </button>
+        <div className="counterfactual-buttons">
+          <button type="button" className="action-button" disabled={!canGenerate} onClick={onGenerate}>
+            {isGenerating ? 'Generating…' : 'Generate Counterfactual'}
+          </button>
+          <button type="button" className="action-button" disabled={!canApplyChanges} onClick={onApplyChanges}>
+            Apply Changes
+          </button>
+        </div>
       </div>
       {renderBody()}
     </section>

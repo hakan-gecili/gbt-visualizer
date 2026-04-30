@@ -157,14 +157,19 @@ class CounterfactualService:
         threshold: float,
         target_class: Optional[int] = None,
         max_steps: int = 3,
+        feature_vector: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         started = time.perf_counter()
         if not 0 <= int(row_index) < len(self.dataset):
             raise IndexError(f"row_index out of range; dataset has {len(self.dataset)} rows")
-        if not 0.0 < float(threshold) < 1.0:
+        if not 0.0 <= float(threshold) <= 1.0:
             raise ValueError("threshold must be between 0 and 1")
 
-        x_row = self.dataset.iloc[[int(row_index)]].copy()
+        if feature_vector is None:
+            x_row = self.dataset.iloc[[int(row_index)]].copy()
+        else:
+            raw_row = pd.DataFrame([feature_vector], index=[int(row_index)])
+            x_row = encode_dataset_for_model(raw_row, self.schema, self.feature_names)
         p0 = float(self.model.predict_proba(x_row)[0, 1])
         current_prediction = int(p0 >= float(threshold))
         target = int(1 - current_prediction if target_class is None else target_class)
@@ -295,6 +300,7 @@ def generate_counterfactual_for_row(
     threshold: float,
     target_class: Optional[int] = None,
     max_steps: int = 3,
+    feature_vector: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     example = load_example(example_path)
     service = CounterfactualService.from_loaded_example(example)
@@ -303,4 +309,5 @@ def generate_counterfactual_for_row(
         threshold=threshold,
         target_class=target_class,
         max_steps=max_steps,
+        feature_vector=feature_vector,
     )

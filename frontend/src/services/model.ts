@@ -89,17 +89,34 @@ export function generateCounterfactual(
   rowIndex: number,
   threshold: number,
   targetClass: number,
-  maxSteps = 3,
+  featureVector?: Record<string, FeatureValue>,
+  maxSteps?: number,
 ) {
+  const body: {
+    session_id: string
+    row_index: number
+    threshold: number
+    target_class: number
+    feature_vector?: Record<string, FeatureValue>
+    max_steps?: number
+  } = {
+    session_id: sessionId,
+    row_index: rowIndex,
+    threshold,
+    target_class: targetClass,
+  }
+
+  if (featureVector !== undefined) {
+    body.feature_vector = featureVector
+  }
+
+  if (maxSteps !== undefined) {
+    body.max_steps = maxSteps
+  }
+
   return apiFetch<CounterfactualResponse>('/api/counterfactuals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      session_id: sessionId,
-      row_index: rowIndex,
-      threshold,
-      target_class: targetClass,
-      max_steps: maxSteps,
-    }),
+    body: JSON.stringify(body),
   })
 }

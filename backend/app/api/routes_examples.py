@@ -20,6 +20,7 @@ from app.services.dataset_service import (
     summarize_dataset,
 )
 from app.services.feature_schema_service import FeatureSchemaError, build_feature_metadata, parse_feature_schema_json
+from app.services.counterfactual_service import build_lightgbm_counterfactual_metadata
 from app.services.model_loader import load_ensemble_model_from_path
 from app.services.model_normalizer import LightGBMModelNormalizationError, summarize_layout
 from app.services.serialization_service import serialize_model_summary
@@ -276,6 +277,9 @@ async def load_example(example_id: str) -> LoadExampleResponse:
             dataset_frame=dataframe,
             dataset_summary=dataset_summary,
             preview=preview,
+            counterfactual_metadata=build_lightgbm_counterfactual_metadata(model)
+            if str(model.model_family).lower() == "lightgbm"
+            else {},
         )
         session_store.save(session)
         max_tree_depth, total_leaves = summarize_layout(model)

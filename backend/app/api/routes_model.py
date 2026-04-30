@@ -12,6 +12,7 @@ from app.services.model_loader import load_ensemble_model
 from app.services.feature_schema_service import build_feature_metadata
 from app.services.model_normalizer import LightGBMModelNormalizationError, summarize_layout
 from app.services.serialization_service import serialize_model_summary
+from app.services.counterfactual_service import build_lightgbm_counterfactual_metadata
 
 router = APIRouter(prefix="/api/model", tags=["model"])
 logger = logging.getLogger(__name__)
@@ -41,6 +42,9 @@ async def upload_model(
         model=model,
         predictor=predictor,
         feature_metadata=feature_metadata,
+        counterfactual_metadata=build_lightgbm_counterfactual_metadata(model)
+        if str(model.model_family).lower() == "lightgbm"
+        else {},
     )
     session_store.save(session)
     max_tree_depth, total_leaves = summarize_layout(model)

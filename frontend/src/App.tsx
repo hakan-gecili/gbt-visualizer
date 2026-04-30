@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { ContributionChartPanel } from './components/ContributionChartPanel'
 import { CounterfactualPanel } from './components/CounterfactualPanel'
@@ -14,6 +14,7 @@ import { SelectedTreePanel } from './components/SelectedTreePanel'
 import { UploadPanel } from './components/UploadPanel'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { fetchExamples, fetchLayout, generateCounterfactual, loadExample, predict, selectDatasetRow, uploadDataset, uploadFeatureSchema, uploadModel } from './services/model'
+import { buildFeatureVectorPathEdgeSet } from './components/treeRenderUtils'
 import type {
   CounterfactualResponse,
   DatasetSummary,
@@ -60,6 +61,7 @@ function App() {
   const [datasetPreview, setDatasetPreview] = useState<PreviewPayload | null>(null)
   const [datasetSummary, setDatasetSummary] = useState<DatasetSummary | null>(null)
   const [prediction, setPrediction] = useState<PredictionSummaryType | null>(null)
+  const [decisionThreshold, setDecisionThreshold] = useState(0.5)
   const [treeResults, setTreeResults] = useState<TreePredictionResult[]>([])
   const [globalFeatureImportance, setGlobalFeatureImportance] = useState<FeatureImportanceEntry[]>([])
   const [isFeatureImportanceOpen, setIsFeatureImportanceOpen] = useState(false)
@@ -67,6 +69,7 @@ function App() {
   const [hoveredTreeIndex, setHoveredTreeIndex] = useState<number | null>(null)
   const [selectedTreeIndex, setSelectedTreeIndex] = useState<number | null>(null)
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
+  const [selectedRowFeatureVector, setSelectedRowFeatureVector] = useState<Record<string, FeatureValue> | null>(null)
   const [counterfactualResult, setCounterfactualResult] = useState<CounterfactualResponse | null>(null)
   const [isGeneratingCounterfactual, setIsGeneratingCounterfactual] = useState(false)
   const [counterfactualError, setCounterfactualError] = useState<string | null>(null)
@@ -79,6 +82,33 @@ function App() {
   const [isRadialDarkMode, setIsRadialDarkMode] = useState(false)
 
   const debouncedFeatureVector = useDebouncedValue(featureVector, 150)
+  const isFeatureVectorEdited =
+    selectedRowFeatureVector !== null &&
+    serializeFeatureVector(featureVector) !== serializeFeatureVector(selectedRowFeatureVector)
+  const displayedPrediction = prediction
+    ? {
+        ...prediction,
+        decision_threshold: decisionThreshold,
+        predicted_label: Number(prediction.probability >= decisionThreshold),
+      }
+    : null
+  const counterfactualPathEdgeMap = useMemo(() => {
+    if (!counterfactualResult?.counterfactuals.length) {
+      return new Map<number, Set<string>>()
+    }
+
+    const counterfactualVector = { ...featureVector }
+    for (const change of counterfactualResult.counterfactuals[0].changes) {
+      counterfactualVector[change.feature] = change.new_value
+    }
+
+    return new Map(
+      layoutTrees.map((tree) => [
+        tree.tree_index,
+        buildFeatureVectorPathEdgeSet(tree, featureMetadata, counterfactualVector),
+      ]),
+    )
+  }, [counterfactualResult, featureMetadata, featureVector, layoutTrees])
 
   useEffect(() => {
     async function loadAvailableExamples() {
@@ -142,12 +172,14 @@ function App() {
       setDatasetPreview(null)
       setDatasetSummary(null)
       setPrediction(null)
+      setDecisionThreshold(modelResponse.model_summary.decision_threshold)
       setTreeResults([])
       setCounterfactualResult(null)
       setCounterfactualError(null)
       setIsFeatureImportanceOpen(false)
       setHoveredTreeIndex(null)
       setSelectedRowIndex(null)
+      setSelectedRowFeatureVector(null)
       predictionRequestIdRef.current = 0
       appliedFeatureVectorKeyRef.current = ''
     } catch (error) {
@@ -173,6 +205,7 @@ function App() {
       const nextFeatureVector = buildDefaultFeatureVector(response.feature_metadata)
       setFeatureVector(nextFeatureVector)
       setSelectedRowIndex(null)
+      setSelectedRowFeatureVector(null)
       setHoveredTreeIndex(null)
       setCounterfactualResult(null)
       setCounterfactualError(null)
@@ -200,6 +233,7 @@ function App() {
       const nextFeatureVector = buildDefaultFeatureVector(response.feature_metadata)
       setFeatureVector(nextFeatureVector)
       setSelectedRowIndex(null)
+      setSelectedRowFeatureVector(null)
       setHoveredTreeIndex(null)
       setCounterfactualResult(null)
       setCounterfactualError(null)
@@ -235,12 +269,14 @@ function App() {
       setDatasetPreview(response.preview)
       setDatasetSummary(response.dataset_summary)
       setPrediction(null)
+      setDecisionThreshold(response.model_summary.decision_threshold)
       setTreeResults([])
       setCounterfactualResult(null)
       setCounterfactualError(null)
       setIsFeatureImportanceOpen(false)
       setHoveredTreeIndex(null)
       setSelectedRowIndex(null)
+      setSelectedRowFeatureVector(null)
       predictionRequestIdRef.current = 0
       appliedFeatureVectorKeyRef.current = ''
     } catch (error) {
@@ -266,6 +302,7 @@ function App() {
         return
       }
       setSelectedRowIndex(rowIndex)
+      setSelectedRowFeatureVector(response.sample.feature_vector)
       setFeatureVector(response.sample.feature_vector)
       appliedFeatureVectorKeyRef.current = serializeFeatureVector(response.sample.feature_vector)
       setErrorMessage(null)
@@ -280,7 +317,6 @@ function App() {
   }
 
   function handleFeatureChange(featureName: string, value: FeatureValue) {
-    setSelectedRowIndex(null)
     setHoveredTreeIndex(null)
     setCounterfactualResult(null)
     setCounterfactualError(null)
@@ -288,6 +324,18 @@ function App() {
       ...current,
       [featureName]: value,
     }))
+  }
+
+  function handleResetToRowValues() {
+    if (selectedRowFeatureVector === null) {
+      return
+    }
+
+    setHoveredTreeIndex(null)
+    setCounterfactualResult(null)
+    setCounterfactualError(null)
+    appliedFeatureVectorKeyRef.current = ''
+    setFeatureVector(selectedRowFeatureVector)
   }
 
   async function handleGenerateCounterfactual() {
@@ -299,13 +347,14 @@ function App() {
     setCounterfactualError(null)
 
     try {
-      const targetClass = prediction.predicted_label === 1 ? 0 : 1
+      const currentLabel = Number(prediction.probability >= decisionThreshold)
+      const targetClass = currentLabel === 1 ? 0 : 1
       const response = await generateCounterfactual(
         sessionId,
         selectedRowIndex,
-        prediction.decision_threshold,
+        decisionThreshold,
         targetClass,
-        3,
+        featureVector,
       )
       setCounterfactualResult(response)
     } catch (error) {
@@ -333,7 +382,6 @@ function App() {
       }
     }
 
-    setSelectedRowIndex(null)
     setHoveredTreeIndex(null)
     setCounterfactualResult(null)
     setCounterfactualError(null)
@@ -367,21 +415,26 @@ function App() {
         <FeatureControlPanel
           featureMetadata={featureMetadata}
           featureVector={featureVector}
+          canResetToRowValues={selectedRowFeatureVector !== null && isFeatureVectorEdited}
           onFeatureChange={handleFeatureChange}
+          onResetToRowValues={handleResetToRowValues}
         />
       </aside>
 
       <section className="main-stage">
         {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
         <PredictionSummary
-          prediction={prediction}
+          prediction={displayedPrediction}
           treeResults={treeResults}
+          threshold={decisionThreshold}
+          onThresholdChange={setDecisionThreshold}
         />
         <CounterfactualPanel
           hasSession={sessionId !== null}
           modelFamily={modelFamily}
           selectedRowIndex={selectedRowIndex}
-          prediction={prediction}
+          isFeatureVectorEdited={isFeatureVectorEdited}
+          prediction={displayedPrediction}
           busy={busy}
           isGenerating={isGeneratingCounterfactual}
           errorMessage={counterfactualError}
@@ -398,6 +451,7 @@ function App() {
         <RadialTreeView
           trees={layoutTrees}
           treeResults={treeResults}
+          counterfactualPathEdgeMap={counterfactualPathEdgeMap}
           panelScale={panelScale}
           onPanelScaleChange={setPanelScale}
           hoveredTreeIndex={hoveredTreeIndex}
@@ -411,11 +465,15 @@ function App() {
           trees={layoutTrees}
           treeResults={treeResults}
           selectedTreeIndex={selectedTreeIndex}
+          counterfactualPathEdgeMap={counterfactualPathEdgeMap}
         />
         <PathExplanationPanel
           trees={layoutTrees}
           treeResults={treeResults}
           selectedTreeIndex={selectedTreeIndex}
+          featureMetadata={featureMetadata}
+          featureVector={featureVector}
+          counterfactualResult={counterfactualResult}
         />
         <DatasetTable
           preview={datasetPreview}

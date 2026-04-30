@@ -13,6 +13,7 @@ from app.services.cf_engine import build_counterfactual_engine
 from app.services.cf_engine.fast_prediction import select_fast_prediction_evaluator
 from app.services.cf_engine.unified_counterfactual_engine import UnifiedPrediction, generate_unified_counterfactual
 from app.services.dataset_service import extract_feature_vector_from_row
+from app.services.feature_schema_service import FeatureValue, prepare_feature_vector
 from app.services.prediction_service import predict_model
 from app.services.xgboost_counterfactual_service import generate_xgboost_counterfactual_for_session as generate_xgboost_counterfactual
 
@@ -105,6 +106,112 @@ def _build_session_engine_key(
     return f"{session_id}:{_build_engine_cache_key(model, predictor, dataset, schema)}"
 
 
+def build_lightgbm_counterfactual_metadata(model: Any) -> dict[str, float]:
+    trees = list(getattr(model, "trees", []) or [])
+    if not trees:
+        return {"avg_leaves": 0.0, "avg_depth": 0.0}
+
+    leaf_counts = [float(getattr(tree, "num_leaves", 0) or len(getattr(tree, "leaves", {}) or {})) for tree in trees]
+    depths = [
+        float(
+            getattr(tree, "max_depth", 0)
+            or max((getattr(leaf, "depth", 0) for leaf in getattr(tree, "leaves", {}).values()), default=0)
+        )
+        for tree in trees
+    ]
+    return {
+        "avg_leaves": sum(leaf_counts) / len(leaf_counts),
+        "avg_depth": sum(depths) / len(depths),
+    }
+
+
+def _get_lightgbm_counterfactual_metadata(session: SessionState) -> dict[str, float]:
+    metadata = session.counterfactual_metadata
+    if "avg_leaves" not in metadata:
+        metadata.update(build_lightgbm_counterfactual_metadata(session.model))
+    return {
+        "avg_leaves": float(metadata.get("avg_leaves", 0.0)),
+        "avg_depth": float(metadata.get("avg_depth", 0.0)),
+    }
+
+
+def _legacy_lightgbm_adaptive_max_steps(avg_leaves: float, margin: float) -> int:
+    if avg_leaves <= 12.0:
+        max_steps = 3
+    elif avg_leaves <= 25.0:
+        max_steps = 5
+    else:
+        max_steps = 10
+
+    if margin < -2.0:
+        max_steps += 2
+
+    return min(max_steps, 12)
+
+
+def _counterfactual_debug_enabled() -> bool:
+    return str(os.getenv("COUNTERFACTUAL_DEBUG", "")).lower() in {"1", "true", "yes", "on"}
+
+
+def _debug_legacy_lightgbm_max_steps(
+    *,
+    avg_leaves: float,
+    margin: float | None,
+    max_steps: int,
+    manual_override: bool,
+) -> None:
+    if not _counterfactual_debug_enabled():
+        return
+    margin_text = "unknown" if margin is None else f"{margin:.6f}"
+    print(
+        "[counterfactual:legacy-lightgbm] "
+        f"avg_leaves={avg_leaves:.3f} "
+        f"original_margin={margin_text} "
+        f"max_steps={int(max_steps)} "
+        f"manual_override={manual_override}"
+    )
+
+
+def _resolve_legacy_lightgbm_max_steps(
+    *,
+    session: SessionState,
+    dataset: pd.DataFrame,
+    row_index: int,
+    max_steps: int | None,
+    feature_vector: dict[str, FeatureValue] | None = None,
+) -> int:
+    manual_override = max_steps is not None
+    metadata = _get_lightgbm_counterfactual_metadata(session)
+    avg_leaves = metadata["avg_leaves"]
+
+    if manual_override:
+        resolved_max_steps = int(max_steps)
+        margin: float | None = None
+        if _counterfactual_debug_enabled():
+            raw_vector = feature_vector or extract_feature_vector_from_row(dataset, row_index, session.feature_metadata)
+            _, prediction = predict_model(session.model, session.predictor, session.feature_metadata, raw_vector)
+            margin = float(prediction.margin)
+        _debug_legacy_lightgbm_max_steps(
+            avg_leaves=avg_leaves,
+            margin=margin,
+            max_steps=resolved_max_steps,
+            manual_override=True,
+        )
+        return resolved_max_steps
+
+    raw_vector = feature_vector or extract_feature_vector_from_row(dataset, row_index, session.feature_metadata)
+    _, prediction = predict_model(session.model, session.predictor, session.feature_metadata, raw_vector)
+    margin = float(prediction.margin)
+    resolved_max_steps = _legacy_lightgbm_adaptive_max_steps(avg_leaves, margin)
+    _debug_legacy_lightgbm_max_steps(
+        avg_leaves=avg_leaves,
+        margin=margin,
+        max_steps=resolved_max_steps,
+        manual_override=False,
+    )
+    return resolved_max_steps
+
+
 def get_engine(
     model: Any,
     dataset: pd.DataFrame,
@@ -146,6 +253,7 @@ def generate_counterfactual(
     *,
     predictor: Any | None = None,
     key: str | None = None,
+    feature_vector: dict[str, FeatureValue] | None = None,
 ) -> dict[str, Any]:
     engine = get_engine(
         model=model,
@@ -159,6 +267,7 @@ def generate_counterfactual(
         threshold=threshold,
         target_class=target_class,
         max_steps=max_steps,
+        feature_vector=feature_vector,
     )
 
 
@@ -187,11 +296,17 @@ def generate_counterfactual_for_session(
     row_index: int,
     threshold: float,
     target_class: int | None,
-    max_steps: int = 3,
+    feature_vector: dict[str, FeatureValue] | None = None,
+    max_steps: int | None = None,
 ) -> dict[str, Any]:
     session = session_store.get(session_id)
     dataset = _ensure_session_dataset(session)
     schema = build_counterfactual_schema(session.feature_metadata)
+    prepared_feature_vector = (
+        prepare_feature_vector(session.feature_metadata, feature_vector)
+        if feature_vector is not None
+        else None
+    )
     if str(session.model.model_family).lower() == "xgboost":
         return generate_xgboost_counterfactual(
             model=session.model,
@@ -201,7 +316,8 @@ def generate_counterfactual_for_session(
             row_index=row_index,
             threshold=threshold,
             target_class=target_class,
-            max_steps=max_steps,
+            max_steps=3 if max_steps is None else int(max_steps),
+            feature_vector=prepared_feature_vector,
         )
     if str(session.model.model_family).lower() != "lightgbm":
         raise TypeError("Counterfactual generation is currently supported only for LightGBM and XGBoost models.")
@@ -212,8 +328,16 @@ def generate_counterfactual_for_session(
             row_index=row_index,
             threshold=threshold,
             target_class=target_class,
-            max_steps=max_steps,
+            max_steps=3 if max_steps is None else int(max_steps),
+            feature_vector=prepared_feature_vector,
         )
+    resolved_max_steps = _resolve_legacy_lightgbm_max_steps(
+        session=session,
+        dataset=dataset,
+        row_index=row_index,
+        max_steps=max_steps,
+        feature_vector=prepared_feature_vector,
+    )
     result = generate_counterfactual(
         model=session.model,
         predictor=session.predictor,
@@ -222,8 +346,9 @@ def generate_counterfactual_for_session(
         row_index=row_index,
         threshold=threshold,
         target_class=target_class,
-        max_steps=max_steps,
+        max_steps=resolved_max_steps,
         key=_build_session_engine_key(session_id, session.model, session.predictor, dataset, schema),
+        feature_vector=prepared_feature_vector,
     )
     return _validate_counterfactual_result_with_app_prediction(
         session=session,
@@ -232,6 +357,7 @@ def generate_counterfactual_for_session(
         row_index=row_index,
         threshold=threshold,
         target_class=target_class,
+        feature_vector=prepared_feature_vector,
     )
 
 
@@ -254,8 +380,9 @@ def _generate_unified_lightgbm_counterfactual_for_session(
     threshold: float,
     target_class: int | None,
     max_steps: int,
+    feature_vector: dict[str, FeatureValue] | None = None,
 ) -> dict[str, Any]:
-    raw_feature_vector = extract_feature_vector_from_row(dataset, int(row_index), session.feature_metadata)
+    raw_feature_vector = feature_vector or extract_feature_vector_from_row(dataset, int(row_index), session.feature_metadata)
     original_vector, _ = predict_model(
         session.model,
         session.predictor,
@@ -305,8 +432,9 @@ def _validate_counterfactual_result_with_app_prediction(
     row_index: int,
     threshold: float,
     target_class: int | None,
+    feature_vector: dict[str, FeatureValue] | None = None,
 ) -> dict[str, Any]:
-    raw_feature_vector = extract_feature_vector_from_row(dataset, int(row_index), session.feature_metadata)
+    raw_feature_vector = feature_vector or extract_feature_vector_from_row(dataset, int(row_index), session.feature_metadata)
     prepared_feature_vector, prediction = predict_model(
         session.model,
         session.predictor,
