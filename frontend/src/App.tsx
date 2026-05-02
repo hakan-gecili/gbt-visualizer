@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ContributionChartPanel } from './components/ContributionChartPanel'
 import { CounterfactualPanel } from './components/CounterfactualPanel'
 import { DatasetTable } from './components/DatasetTable'
+import { EnsembleStructureCube } from './components/EnsembleStructureCube'
 import { ExamplesPanel } from './components/ExamplesPanel'
 import { FeatureImportancePanel } from './components/FeatureImportancePanel'
 import { FeatureControlPanel } from './components/FeatureControlPanel'
@@ -460,6 +461,11 @@ function App() {
           onSelectTree={setSelectedTreeIndex}
           isDarkMode={isRadialDarkMode}
           onToggleDarkMode={() => setIsRadialDarkMode((current) => !current)}
+        />
+        <EnsembleStructureCube
+          trees={layoutTrees}
+          featureMetadata={featureMetadata}
+          treeResults={treeResults}
         />
         <SelectedTreePanel
           trees={layoutTrees}
