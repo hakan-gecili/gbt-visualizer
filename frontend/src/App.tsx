@@ -35,6 +35,45 @@ function buildDefaultFeatureVector(featureMetadata: FeatureMetadata[]) {
   ) as Record<string, FeatureValue>
 }
 
+function randomOptionValue(feature: FeatureMetadata) {
+  return feature.options[Math.floor(Math.random() * feature.options.length)]?.value ?? feature.default_value ?? null
+}
+
+function isIntegerLikeNumericFeature(feature: FeatureMetadata) {
+  if (feature.min_value === null || feature.max_value === null) {
+    return false
+  }
+
+  const hasIntegerBounds = Number.isInteger(feature.min_value) && Number.isInteger(feature.max_value)
+  return hasIntegerBounds && feature.max_value - feature.min_value >= 1
+}
+
+function randomFeatureValue(feature: FeatureMetadata): FeatureValue {
+  if (feature.type === 'binary' || feature.type === 'categorical') {
+    return randomOptionValue(feature)
+  }
+
+  if (feature.min_value === null || feature.max_value === null) {
+    return typeof feature.default_value === 'number' ? feature.default_value : 0
+  }
+
+  const min = Math.min(feature.min_value, feature.max_value)
+  const max = Math.max(feature.min_value, feature.max_value)
+  if (isIntegerLikeNumericFeature(feature)) {
+    const integerMin = Math.ceil(min)
+    const integerMax = Math.floor(max)
+    return integerMin + Math.floor(Math.random() * (integerMax - integerMin + 1))
+  }
+
+  return min + Math.random() * (max - min)
+}
+
+function buildRandomFeatureVector(featureMetadata: FeatureMetadata[]) {
+  return Object.fromEntries(
+    featureMetadata.map((feature) => [feature.name, randomFeatureValue(feature)]),
+  ) as Record<string, FeatureValue>
+}
+
 function serializeFeatureVector(featureVector: Record<string, FeatureValue>) {
   return JSON.stringify(
     Object.entries(featureVector).sort(([left], [right]) => left.localeCompare(right)),
@@ -71,11 +110,13 @@ function App() {
   const [selectedTreeIndex, setSelectedTreeIndex] = useState<number | null>(null)
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [selectedRowFeatureVector, setSelectedRowFeatureVector] = useState<Record<string, FeatureValue> | null>(null)
+  const [isRandomSample, setIsRandomSample] = useState(false)
   const [counterfactualResult, setCounterfactualResult] = useState<CounterfactualResponse | null>(null)
   const [isGeneratingCounterfactual, setIsGeneratingCounterfactual] = useState(false)
   const [counterfactualError, setCounterfactualError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [appliedFeatureVectorKey, setAppliedFeatureVectorKey] = useState('')
   const predictionRequestIdRef = useRef(0)
   const appliedFeatureVectorKeyRef = useRef('')
   const appShellRef = useRef<HTMLElement | null>(null)
@@ -86,6 +127,8 @@ function App() {
   const isFeatureVectorEdited =
     selectedRowFeatureVector !== null &&
     serializeFeatureVector(featureVector) !== serializeFeatureVector(selectedRowFeatureVector)
+  const isPredictionCurrent =
+    prediction !== null && serializeFeatureVector(featureVector) === appliedFeatureVectorKey
   const displayedPrediction = prediction
     ? {
         ...prediction,
@@ -141,7 +184,7 @@ function App() {
         if (requestId !== predictionRequestIdRef.current) {
           return
         }
-        appliedFeatureVectorKeyRef.current = featureVectorKey
+        setAppliedFeatureVectorKeyValue(featureVectorKey)
         setErrorMessage(null)
         setPrediction(response.prediction)
         setTreeResults(response.tree_results)
@@ -152,6 +195,11 @@ function App() {
 
     void runPrediction()
   }, [debouncedFeatureVector, sessionId])
+
+  function setAppliedFeatureVectorKeyValue(featureVectorKey: string) {
+    appliedFeatureVectorKeyRef.current = featureVectorKey
+    setAppliedFeatureVectorKey(featureVectorKey)
+  }
 
   async function handleModelUpload(file: File) {
     setBusy(true)
@@ -181,8 +229,9 @@ function App() {
       setHoveredTreeIndex(null)
       setSelectedRowIndex(null)
       setSelectedRowFeatureVector(null)
+      setIsRandomSample(false)
       predictionRequestIdRef.current = 0
-      appliedFeatureVectorKeyRef.current = ''
+      setAppliedFeatureVectorKeyValue('')
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Model upload failed.')
     } finally {
@@ -207,10 +256,11 @@ function App() {
       setFeatureVector(nextFeatureVector)
       setSelectedRowIndex(null)
       setSelectedRowFeatureVector(null)
+      setIsRandomSample(false)
       setHoveredTreeIndex(null)
       setCounterfactualResult(null)
       setCounterfactualError(null)
-      appliedFeatureVectorKeyRef.current = ''
+      setAppliedFeatureVectorKeyValue('')
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Dataset upload failed.')
     } finally {
@@ -235,10 +285,11 @@ function App() {
       setFeatureVector(nextFeatureVector)
       setSelectedRowIndex(null)
       setSelectedRowFeatureVector(null)
+      setIsRandomSample(false)
       setHoveredTreeIndex(null)
       setCounterfactualResult(null)
       setCounterfactualError(null)
-      appliedFeatureVectorKeyRef.current = ''
+      setAppliedFeatureVectorKeyValue('')
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Feature schema upload failed.')
     } finally {
@@ -278,8 +329,9 @@ function App() {
       setHoveredTreeIndex(null)
       setSelectedRowIndex(null)
       setSelectedRowFeatureVector(null)
+      setIsRandomSample(false)
       predictionRequestIdRef.current = 0
-      appliedFeatureVectorKeyRef.current = ''
+      setAppliedFeatureVectorKeyValue('')
     } catch (error) {
       setSelectedExample('')
       setErrorMessage(error instanceof Error ? error.message : 'Example load failed.')
@@ -304,8 +356,9 @@ function App() {
       }
       setSelectedRowIndex(rowIndex)
       setSelectedRowFeatureVector(response.sample.feature_vector)
+      setIsRandomSample(false)
       setFeatureVector(response.sample.feature_vector)
-      appliedFeatureVectorKeyRef.current = serializeFeatureVector(response.sample.feature_vector)
+      setAppliedFeatureVectorKeyValue(serializeFeatureVector(response.sample.feature_vector))
       setErrorMessage(null)
       setPrediction(response.prediction)
       setTreeResults(response.tree_results)
@@ -327,20 +380,22 @@ function App() {
     }))
   }
 
-  function handleResetToRowValues() {
-    if (selectedRowFeatureVector === null) {
+  function handleGenerateRandomSample() {
+    if (!featureMetadata.length) {
       return
     }
 
     setHoveredTreeIndex(null)
     setCounterfactualResult(null)
     setCounterfactualError(null)
-    appliedFeatureVectorKeyRef.current = ''
-    setFeatureVector(selectedRowFeatureVector)
+    setIsRandomSample(true)
+    setAppliedFeatureVectorKeyValue('')
+    setFeatureVector(buildRandomFeatureVector(featureMetadata))
   }
 
   async function handleGenerateCounterfactual() {
-    if (!sessionId || selectedRowIndex === null || !prediction) {
+    const counterfactualRowIndex = selectedRowIndex ?? (isRandomSample ? 0 : null)
+    if (!sessionId || counterfactualRowIndex === null || !prediction || !isPredictionCurrent) {
       return
     }
 
@@ -352,7 +407,7 @@ function App() {
       const targetClass = currentLabel === 1 ? 0 : 1
       const response = await generateCounterfactual(
         sessionId,
-        selectedRowIndex,
+        counterfactualRowIndex,
         decisionThreshold,
         targetClass,
         featureVector,
@@ -386,7 +441,8 @@ function App() {
     setHoveredTreeIndex(null)
     setCounterfactualResult(null)
     setCounterfactualError(null)
-    appliedFeatureVectorKeyRef.current = ''
+    setIsRandomSample(false)
+    setAppliedFeatureVectorKeyValue('')
     setFeatureVector((current) => {
       const nextFeatureVector = { ...current }
       for (const change of changes) {
@@ -416,9 +472,9 @@ function App() {
         <FeatureControlPanel
           featureMetadata={featureMetadata}
           featureVector={featureVector}
-          canResetToRowValues={selectedRowFeatureVector !== null && isFeatureVectorEdited}
+          canGenerateRandomSample={featureMetadata.length > 0}
           onFeatureChange={handleFeatureChange}
-          onResetToRowValues={handleResetToRowValues}
+          onGenerateRandomSample={handleGenerateRandomSample}
         />
       </aside>
 
@@ -435,6 +491,8 @@ function App() {
           modelFamily={modelFamily}
           selectedRowIndex={selectedRowIndex}
           isFeatureVectorEdited={isFeatureVectorEdited}
+          isRandomSample={isRandomSample}
+          isPredictionCurrent={isPredictionCurrent}
           prediction={displayedPrediction}
           busy={busy}
           isGenerating={isGeneratingCounterfactual}

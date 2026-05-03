@@ -346,9 +346,10 @@ export function SelectedTreePanel({
                 id="selected-tree-zoom"
                 type="range"
                 min={0.75}
-                max={2.25}
+                max={3}
                 step={0.01}
                 value={zoom}
+                onInput={(event) => setZoom(Number(event.currentTarget.value))}
                 onChange={(event) => setZoom(Number(event.target.value))}
               />
               <strong>{`${Math.round(zoom * 100)}%`}</strong>

@@ -5,6 +5,8 @@ type CounterfactualPanelProps = {
   modelFamily: string | null
   selectedRowIndex: number | null
   isFeatureVectorEdited: boolean
+  isRandomSample: boolean
+  isPredictionCurrent: boolean
   prediction: PredictionSummaryType | null
   busy: boolean
   isGenerating: boolean
@@ -29,6 +31,8 @@ export function CounterfactualPanel({
   modelFamily,
   selectedRowIndex,
   isFeatureVectorEdited,
+  isRandomSample,
+  isPredictionCurrent,
   prediction,
   busy,
   isGenerating,
@@ -42,15 +46,19 @@ export function CounterfactualPanel({
   const targetClass = currentLabel === null ? null : currentLabel === 1 ? 0 : 1
   const supportsCounterfactuals = ['lightgbm', 'xgboost'].includes((modelFamily ?? '').toLowerCase())
   const startingPointText =
-    selectedRowIndex === null
+    isRandomSample
+      ? 'Starting point: random sample'
+      : selectedRowIndex === null
       ? 'No row selected'
       : isFeatureVectorEdited
         ? `Starting point: Edited feature values (from row ${selectedRowIndex})`
         : `Starting point: Dataset row ${selectedRowIndex}`
+  const hasStartingPoint = selectedRowIndex !== null || isRandomSample
   const canGenerate =
     hasSession &&
     supportsCounterfactuals &&
-    selectedRowIndex !== null &&
+    hasStartingPoint &&
+    isPredictionCurrent &&
     currentThreshold !== null &&
     currentLabel !== null &&
     !busy &&
@@ -66,12 +74,12 @@ export function CounterfactualPanel({
       return <div className="empty-state">Counterfactual generation is not available for this model family.</div>
     }
 
-    if (selectedRowIndex === null) {
+    if (!hasStartingPoint) {
       return <div className="empty-state">Select a dataset row to enable counterfactual generation.</div>
     }
 
-    if (!prediction) {
-      return <div className="empty-state">Wait for a prediction on the selected row before generating a counterfactual.</div>
+    if (!prediction || !isPredictionCurrent) {
+      return <div className="empty-state">Wait for a prediction on the current input before generating a counterfactual.</div>
     }
 
     if (isGenerating) {

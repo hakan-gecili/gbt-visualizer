@@ -254,6 +254,11 @@ h2 {
   border: 1px solid var(--line);
 }
 
+.random-sample-button {
+  padding: 7px 11px;
+  font-size: 0.82rem;
+}
+
 .action-button:hover,
 .ghost-button:hover {
   transform: translateY(-1px);
