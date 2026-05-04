@@ -27,7 +27,17 @@ explorable in real time**.
 
 ------------------------------------------------------------------------
 
-## 🆕 Version 3
+## 🆕 Version 4
+
+- Added a 3D cube to visualize feature usage across trees and depths
+- Replaced layered outcome views with directional bars for positive/negative signals
+- Enabled tree-level filtering so all views reflect the selected tree
+- Synchronized tree selection across all panels
+- Improved path highlighting without losing underlying feature information
+- Simplified visuals for better clarity and interpretability
+
+
+## Version 3
 
 Version 3 adds counterfactuals and makes the app interactive beyond visualization.
 
@@ -71,7 +81,17 @@ USE_FAST_CF_EVALUATOR=1
 
 ------------------------------------------------------------------------
 
-### 🌲 Selected Tree Panel (NEW)
+### 3D Visualization (Ensemble Structure Cubes)
+
+- 3D visualization of feature usage across trees and depths
+- Shows how features contribute to positive and negative outcomes via directional signals
+- Supports per-tree exploration with consistent filtering across views
+- Highlights active decision paths for selected observations
+- Designed for intuitive exploration with minimal visual clutter
+
+------------------------------------------------------------------------
+
+### 🌲 Selected Tree Panel
 
 -   Visualizes a single tree in a top-down structure
 -   Highlights the exact path taken (root → leaf)
@@ -83,7 +103,7 @@ USE_FAST_CF_EVALUATOR=1
 
 ------------------------------------------------------------------------
 
-### 🧭 Decision Path Visualization (NEW)
+### 🧭 Decision Path Visualization
 
 -   Clearly shows how a sample traverses each tree
 -   Consistent with backend traversal logic
