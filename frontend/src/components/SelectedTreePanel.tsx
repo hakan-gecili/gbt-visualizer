@@ -7,6 +7,7 @@ type SelectedTreePanelProps = {
   trees: TreeLayout[]
   treeResults: TreePredictionResult[]
   selectedTreeIndex: number | null
+  onSelectTree: (treeIndex: number | null) => void
   counterfactualPathEdgeMap: Map<number, Set<string>>
 }
 
@@ -93,6 +94,7 @@ export function SelectedTreePanel({
   trees,
   treeResults,
   selectedTreeIndex,
+  onSelectTree,
   counterfactualPathEdgeMap,
 }: SelectedTreePanelProps) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
@@ -104,15 +106,6 @@ export function SelectedTreePanel({
   const selectedTree =
     selectedTreeIndex === null ? null : trees.find((tree) => tree.tree_index === selectedTreeIndex) ?? null
   const treeResult = treeResults.find((item) => item.tree_index === selectedTreeIndex)
-
-  useEffect(() => {
-    setZoom(DEFAULT_ZOOM)
-    setPanY(DEFAULT_PAN_Y)
-    setPanOffset(DEFAULT_PAN_OFFSET)
-    setIsDraggingBackground(false)
-    dragStartMouseRef.current = null
-    dragStartOffsetRef.current = DEFAULT_PAN_OFFSET
-  }, [selectedTreeIndex])
 
   useEffect(() => {
     if (!isDraggingBackground) {
@@ -186,20 +179,36 @@ export function SelectedTreePanel({
           <h2>Selected Tree</h2>
           <span className="panel-caption">Expanded structure synchronized with the active observation</span>
         </div>
-        {selectedTree ? (
-          <div className="selected-tree-summary">
-            <strong>{`Tree ${selectedTree.tree_index}`}</strong>
-            {treeResult ? (
-              <span>{`Contribution ${contributionLabel(treeResult.contribution)} · Leaf ${treeResult.leaf_value.toFixed(4)}`}</span>
-            ) : (
-              <span>No active prediction yet</span>
-            )}
-          </div>
-        ) : null}
+        <div className="selected-tree-header-controls">
+          <label className="selected-tree-select-label">
+            Tree
+            <select
+              value={selectedTreeIndex ?? ''}
+              onChange={(event) => onSelectTree(event.target.value === '' ? null : Number(event.target.value))}
+            >
+              <option value="">None</option>
+              {trees.map((tree) => (
+                <option key={tree.tree_index} value={tree.tree_index}>
+                  {`Tree ${tree.tree_index}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          {selectedTree ? (
+            <div className="selected-tree-summary">
+              <strong>{`Tree ${selectedTree.tree_index}`}</strong>
+              {treeResult ? (
+                <span>{`Contribution ${contributionLabel(treeResult.contribution)} · Leaf ${treeResult.leaf_value.toFixed(4)}`}</span>
+              ) : (
+                <span>No active prediction yet</span>
+              )}
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {!selectedTree || !detailPayload ? (
-        <div className="empty-state">Select a tree from the radial layout to inspect it in detail.</div>
+        <div className="empty-state">Select a tree to inspect it in detail.</div>
       ) : (
         <>
           <div className="selected-tree-workspace">

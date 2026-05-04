@@ -217,7 +217,7 @@ function App() {
       setFeatureVector(nextFeatureVector)
       setGlobalFeatureImportance(modelResponse.model_summary.global_feature_importance)
       setLayoutTrees(layoutResponse.layout.trees)
-      setSelectedTreeIndex(layoutResponse.layout.trees[0]?.tree_index ?? null)
+      setSelectedTreeIndex(null)
       setDatasetPreview(null)
       setDatasetSummary(null)
       setPrediction(null)
@@ -317,7 +317,7 @@ function App() {
       setFeatureVector(nextFeatureVector)
       setGlobalFeatureImportance(response.model_summary.global_feature_importance)
       setLayoutTrees(layoutResponse.layout.trees)
-      setSelectedTreeIndex(layoutResponse.layout.trees[0]?.tree_index ?? null)
+      setSelectedTreeIndex(null)
       setDatasetPreview(response.preview)
       setDatasetSummary(response.dataset_summary)
       setPrediction(null)
@@ -524,11 +524,14 @@ function App() {
           trees={layoutTrees}
           featureMetadata={featureMetadata}
           treeResults={treeResults}
+          selectedTreeIndex={selectedTreeIndex}
+          onSelectTree={setSelectedTreeIndex}
         />
         <SelectedTreePanel
           trees={layoutTrees}
           treeResults={treeResults}
           selectedTreeIndex={selectedTreeIndex}
+          onSelectTree={setSelectedTreeIndex}
           counterfactualPathEdgeMap={counterfactualPathEdgeMap}
         />
         <PathExplanationPanel
