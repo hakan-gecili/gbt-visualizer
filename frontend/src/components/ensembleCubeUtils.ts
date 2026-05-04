@@ -11,6 +11,7 @@ export type EnsembleCubeCell = {
   layerIndex: number
   count: number
   treeIndices: number[]
+  treeCounts: Record<number, number>
   nodeIds: number[]
   positiveLeafCount: number
   negativeLeafCount: number
@@ -35,8 +36,9 @@ export type EnsembleCubeData = {
   treeRoots: EnsembleCubeTreeRoot[]
 }
 
-type MutableCubeCell = Omit<EnsembleCubeCell, 'treeIndices' | 'nodeIds'> & {
+type MutableCubeCell = Omit<EnsembleCubeCell, 'treeIndices' | 'treeCounts' | 'nodeIds'> & {
   treeIndices: Set<number>
+  treeCounts: Map<number, number>
   nodeIds: Set<number>
 }
 
@@ -65,6 +67,7 @@ function createMutableCell(
     layerIndex: LAYER_INDEX[layer],
     count: 0,
     treeIndices: new Set<number>(),
+    treeCounts: new Map<number, number>(),
     nodeIds: new Set<number>(),
     positiveLeafCount: 0,
     negativeLeafCount: 0,
@@ -108,6 +111,7 @@ function addCellContribution(
   const cell = cellMap.get(key) ?? createMutableCell(featureName, featureIndex, depth, layer)
   cell.count += 1
   cell.treeIndices.add(treeIndex)
+  cell.treeCounts.set(treeIndex, (cell.treeCounts.get(treeIndex) ?? 0) + 1)
   cell.nodeIds.add(nodeId)
   if (layer === 'positive') {
     cell.positiveLeafCount += 1
@@ -196,7 +200,9 @@ export function buildEnsembleCubeData(
   }
 
   const treeMap = new Map(trees.map((tree) => [tree.tree_index, tree]))
-  for (const result of treeResults) {
+  const observedTreeResults =
+    selectedTreeIndex === null ? treeResults : treeResults.filter((result) => result.tree_index === selectedTreeIndex)
+  for (const result of observedTreeResults) {
     const tree = treeMap.get(result.tree_index)
     if (!tree) {
       continue
@@ -219,6 +225,7 @@ export function buildEnsembleCubeData(
     .map((cell) => ({
       ...cell,
       treeIndices: [...cell.treeIndices].sort((left, right) => left - right),
+      treeCounts: Object.fromEntries([...cell.treeCounts].sort(([left], [right]) => left - right)),
       nodeIds: [...cell.nodeIds].sort((left, right) => left - right),
     }))
     .sort((left, right) => {
