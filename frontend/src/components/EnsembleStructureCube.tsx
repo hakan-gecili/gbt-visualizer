@@ -1,5 +1,5 @@
 import { Canvas, type ThreeEvent, useThree } from '@react-three/fiber'
-import { Line, OrbitControls, Text } from '@react-three/drei'
+import { Edges, Line, OrbitControls, Text } from '@react-three/drei'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Color, Object3D, type InstancedMesh } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
@@ -16,32 +16,54 @@ type EnsembleStructureCubeProps = {
   trees: TreeLayout[]
   featureMetadata: FeatureMetadata[]
   treeResults: TreePredictionResult[]
+  selectedTreeIndex: number | null
+  onSelectTree: (treeIndex: number | null) => void
 }
 
 type TooltipState = {
-  cell: EnsembleCubeCell
+  cell: CubeRenderCell
   x: number
   y: number
 }
 
 type CellInstancesProps = {
-  cells: EnsembleCubeCell[]
+  cells: CubeRenderCell[]
   featureCount: number
   maxDepth: number
-  selectedTreeCellKeys: Set<string>
-  observationCellKeys: Set<string>
   opacity: number
   color: Color
-  onHover: (cell: EnsembleCubeCell, x: number, y: number) => void
+  onHover: (cell: CubeRenderCell, x: number, y: number) => void
   onLeave: () => void
-  onSelect: (cell: EnsembleCubeCell) => void
+  onSelect: (cell: CubeRenderCell) => void
 }
 
-type VisibleLayers = Record<EnsembleCubeLayer, boolean>
+type CubeRenderLayer = 'transition' | 'positiveBars' | 'negativeBars'
+type VisibleRenderLayers = Record<CubeRenderLayer, boolean>
+
+type CubeRenderCell = EnsembleCubeCell & {
+  transitionCount: number
+  positiveConnectionCount: number
+  negativeConnectionCount: number
+  transitionCell: EnsembleCubeCell
+  positiveCell: EnsembleCubeCell | null
+  negativeCell: EnsembleCubeCell | null
+}
+
+type BarInstance = {
+  cell: CubeRenderCell
+  direction: 1 | -1
+  count: number
+  maxCount: number
+  highlighted: boolean
+  observed: boolean
+  color: string
+}
 
 const CELL_GAP = 0.82
-const LAYER_GAP = 1.7
 const CELL_SIZE = 0.54
+const BAR_GAP = 0.12
+const BAR_THICKNESS = 0.16
+const MAX_BAR_LENGTH = 1.45
 const dummyObject = new Object3D()
 
 const LAYER_LABELS: Record<EnsembleCubeLayer, string> = {
@@ -50,13 +72,19 @@ const LAYER_LABELS: Record<EnsembleCubeLayer, string> = {
   negative: 'Negative leaf connections',
 }
 
-const LAYERS: EnsembleCubeLayer[] = ['positive', 'transition', 'negative']
+const RENDER_LAYER_LABELS: Record<CubeRenderLayer, string> = {
+  transition: 'Show transition cubes',
+  positiveBars: 'Show positive bars',
+  negativeBars: 'Show negative bars',
+}
 
-function cellPosition(cell: EnsembleCubeCell, featureCount: number, maxDepth: number) {
+const RENDER_LAYERS: CubeRenderLayer[] = ['transition', 'positiveBars', 'negativeBars']
+
+function cellPosition(cell: Pick<EnsembleCubeCell, 'featureIndex' | 'depth'>, featureCount: number, maxDepth: number) {
   return [
     (cell.featureIndex - (featureCount - 1) / 2) * CELL_GAP,
     ((maxDepth || 1) / 2 - cell.depth) * CELL_GAP,
-    cell.layerIndex * LAYER_GAP,
+    0,
   ] as const
 }
 
@@ -64,55 +92,87 @@ function rootCellPosition(root: EnsembleCubeTreeRoot, featureCount: number, maxD
   return [
     (root.featureIndex - (featureCount - 1) / 2) * CELL_GAP,
     ((maxDepth || 1) / 2) * CELL_GAP,
-    LAYER_GAP,
+    0,
   ] as const
 }
 
-function layerBaseColor(layer: EnsembleCubeLayer) {
-  if (layer === 'positive') {
-    return new Color('#1f9d68')
-  }
-  if (layer === 'negative') {
-    return new Color('#2f6fb4')
-  }
-  return new Color('#d97831')
+function colorForCell(cell: CubeRenderCell, maxCountsByLayer: Record<EnsembleCubeLayer, number>) {
+  const maxCount = Math.max(maxCountsByLayer.transition, 1)
+  const intensity = Math.sqrt(cell.transitionCount / maxCount)
+  return new Color('#dce8ee').lerp(new Color('#236a92'), 0.34 + intensity * 0.66)
 }
 
-function colorForCell(
-  cell: EnsembleCubeCell,
-  maxCountsByLayer: Record<EnsembleCubeLayer, number>,
-  highlight: 'none' | 'tree' | 'observation',
-) {
-  const maxCount = Math.max(maxCountsByLayer[cell.layer], 1)
-  const intensity = Math.sqrt(cell.count / maxCount)
-  const color = new Color('#f4efe5').lerp(layerBaseColor(cell.layer), 0.38 + intensity * 0.62)
-  if (highlight === 'observation') {
-    return color.lerp(new Color('#f8e04e'), 0.48)
-  }
-  if (highlight === 'tree') {
-    return color.lerp(new Color('#111111'), 0.18)
-  }
-  return color
-}
-
-function opacityBucket(cell: EnsembleCubeCell, maxCountsByLayer: Record<EnsembleCubeLayer, number>) {
-  const maxCount = Math.max(maxCountsByLayer[cell.layer], 1)
-  const intensity = Math.sqrt(cell.count / maxCount)
+function opacityBucket(cell: CubeRenderCell, maxCountsByLayer: Record<EnsembleCubeLayer, number>) {
+  const maxCount = Math.max(maxCountsByLayer.transition, 1)
+  const intensity = Math.sqrt(cell.transitionCount / maxCount)
   if (intensity > 0.78) {
-    return 0.9
+    return 1
   }
   if (intensity > 0.48) {
-    return 0.66
+    return 0.92
   }
-  return 0.38
+  return 0.78
+}
+
+function combineUniqueNumbers(...groups: Array<number[] | undefined>) {
+  return [...new Set(groups.flatMap((group) => group ?? []))].sort((left, right) => left - right)
+}
+
+function combineExamplePaths(...groups: Array<string[] | undefined>) {
+  return [...new Set(groups.flatMap((group) => group ?? []))].slice(0, 8)
+}
+
+function selectedTreeCount(cell: EnsembleCubeCell | null, selectedTreeIndex: number | null) {
+  if (!cell) {
+    return 0
+  }
+  return selectedTreeIndex === null ? cell.count : cell.treeCounts[selectedTreeIndex] ?? 0
+}
+
+function renderCellKey(featureIndex: number, depth: number) {
+  return `${featureIndex}::${depth}`
+}
+
+function buildRenderCells(cells: EnsembleCubeCell[]) {
+  const grouped = new Map<string, Partial<Record<EnsembleCubeLayer, EnsembleCubeCell>>>()
+  for (const cell of cells) {
+    const key = renderCellKey(cell.featureIndex, cell.depth)
+    grouped.set(key, {
+      ...grouped.get(key),
+      [cell.layer]: cell,
+    })
+  }
+
+  return [...grouped.values()]
+    .filter((group): group is Partial<Record<EnsembleCubeLayer, EnsembleCubeCell>> & { transition: EnsembleCubeCell } => Boolean(group.transition))
+    .map((group) => {
+      const transitionCell = group.transition
+      const positiveCell = group.positive ?? null
+      const negativeCell = group.negative ?? null
+      return {
+        ...transitionCell,
+        layer: 'transition' as const,
+        layerIndex: 1,
+        count: transitionCell.count,
+        transitionCount: transitionCell.count,
+        positiveConnectionCount: positiveCell?.count ?? 0,
+        negativeConnectionCount: negativeCell?.count ?? 0,
+        treeIndices: combineUniqueNumbers(transitionCell.treeIndices, positiveCell?.treeIndices, negativeCell?.treeIndices),
+        nodeIds: combineUniqueNumbers(transitionCell.nodeIds, positiveCell?.nodeIds, negativeCell?.nodeIds),
+        positiveLeafCount: positiveCell?.count ?? 0,
+        negativeLeafCount: negativeCell?.count ?? 0,
+        examplePaths: combineExamplePaths(transitionCell.examplePaths, positiveCell?.examplePaths, negativeCell?.examplePaths),
+        transitionCell,
+        positiveCell,
+        negativeCell,
+      }
+    })
 }
 
 function CellInstances({
   cells,
   featureCount,
   maxDepth,
-  selectedTreeCellKeys,
-  observationCellKeys,
   opacity,
   color,
   onHover,
@@ -127,19 +187,17 @@ function CellInstances({
       return
     }
 
+    mesh.count = cells.length
     cells.forEach((cell, index) => {
       const [x, y, z] = cellPosition(cell, featureCount, maxDepth)
-      const isTreeHighlighted = selectedTreeCellKeys.has(cell.key)
-      const isObservationHighlighted = observationCellKeys.has(cell.key)
-      const scale = isObservationHighlighted ? 1.18 : isTreeHighlighted ? 1.05 : 1
       dummyObject.position.set(x, y, z)
-      dummyObject.scale.setScalar(CELL_SIZE * scale)
+      dummyObject.scale.setScalar(CELL_SIZE)
       dummyObject.updateMatrix()
       mesh.setMatrixAt(index, dummyObject.matrix)
     })
 
     mesh.instanceMatrix.needsUpdate = true
-  }, [cells, featureCount, maxDepth, observationCellKeys, selectedTreeCellKeys])
+  }, [cells, featureCount, maxDepth])
 
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
     if (event.instanceId === undefined) {
@@ -168,6 +226,117 @@ function CellInstances({
       <boxGeometry args={[1, 1, 1]} />
       <meshBasicMaterial color={color} transparent opacity={opacity} />
     </instancedMesh>
+  )
+}
+
+function ActiveCellOutlines({
+  cells,
+  featureCount,
+  maxDepth,
+}: {
+  cells: CubeRenderCell[]
+  featureCount: number
+  maxDepth: number
+}) {
+  if (!cells.length) {
+    return null
+  }
+
+  return (
+    <group>
+      {cells.map((cell) => {
+        const [x, y, z] = cellPosition(cell, featureCount, maxDepth)
+        return (
+          <mesh
+            key={`active-outline-${cell.transitionCell.key}`}
+            position={[x, y, z]}
+            scale={[CELL_SIZE * 1.04, CELL_SIZE * 1.04, CELL_SIZE * 1.04]}
+            raycast={() => null}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            <Edges color="#050505" lineWidth={1.6} />
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}
+
+function BarInstances({ bars, featureCount, maxDepth }: { bars: BarInstance[]; featureCount: number; maxDepth: number }) {
+  const meshRef = useRef<InstancedMesh>(null)
+
+  useLayoutEffect(() => {
+    const mesh = meshRef.current
+    if (!mesh) {
+      return
+    }
+
+    mesh.count = bars.length
+    bars.forEach((bar, index) => {
+      const [x, y, z] = cellPosition(bar.cell, featureCount, maxDepth)
+      const normalized = Math.log1p(bar.count) / Math.log1p(Math.max(bar.maxCount, 1))
+      const length = 0.26 + normalized * MAX_BAR_LENGTH
+      const start = z + bar.direction * (CELL_SIZE / 2 + BAR_GAP)
+      const centerZ = start + bar.direction * (length / 2)
+      const thickness = BAR_THICKNESS * (bar.observed ? 1.45 : bar.highlighted ? 1.22 : 1)
+      dummyObject.position.set(x, y, centerZ)
+      dummyObject.scale.set(thickness, thickness, length)
+      dummyObject.updateMatrix()
+      mesh.setMatrixAt(index, dummyObject.matrix)
+    })
+
+    mesh.instanceMatrix.needsUpdate = true
+  }, [bars, featureCount, maxDepth])
+
+  if (!bars.length) {
+    return null
+  }
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, bars.length]}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshBasicMaterial color={bars[0]?.color ?? '#2f9e62'} transparent opacity={0.86} />
+    </instancedMesh>
+  )
+}
+
+function FeatureDepthGrid({ featureCount, maxDepth }: { featureCount: number; maxDepth: number }) {
+  const width = Math.max((featureCount - 1) * CELL_GAP, CELL_GAP)
+  const topY = ((maxDepth || 1) / 2) * CELL_GAP
+  const bottomY = topY - (maxDepth || 1) * CELL_GAP
+  const leftX = -width / 2
+  const rightX = width / 2
+
+  return (
+    <group>
+      {Array.from({ length: featureCount }, (_, index) => {
+        const x = (index - (featureCount - 1) / 2) * CELL_GAP
+        return (
+          <Line
+            key={`feature-grid-${index}`}
+            points={[[x, topY + CELL_SIZE * 0.46, 0], [x, bottomY - CELL_SIZE * 0.46, 0]]}
+            color="#6d777d"
+            transparent
+            opacity={0.14}
+            lineWidth={0.45}
+          />
+        )
+      })}
+      {Array.from({ length: (maxDepth || 0) + 1 }, (_, depth) => {
+        const y = ((maxDepth || 1) / 2 - depth) * CELL_GAP
+        return (
+          <Line
+            key={`depth-grid-${depth}`}
+            points={[[leftX - CELL_SIZE * 0.46, y, 0], [rightX + CELL_SIZE * 0.46, y, 0]]}
+            color="#6d777d"
+            transparent
+            opacity={0.16}
+            lineWidth={0.45}
+          />
+        )
+      })}
+    </group>
   )
 }
 
@@ -200,7 +369,7 @@ function TreeRootContext({
   )
   const topY = ((maxDepth || 1) / 2) * CELL_GAP
   const treeY = topY + CELL_SIZE * 3
-  const treeZ = LAYER_GAP
+  const treeZ = 0
   const width = Math.max((featureCount - 1) * CELL_GAP, CELL_GAP)
   const treeCellX = useCallback((root: EnsembleCubeTreeRoot) => {
     const index = treeRootPositionMap.get(root.treeIndex) ?? 0
@@ -290,7 +459,7 @@ function CubeScene({
   maxCountsByLayer,
   selectedTreeCellKeys,
   observationCellKeys,
-  visibleLayers,
+  visibleRenderLayers,
   selectedTreeIndex,
   controlsRef,
   onHover,
@@ -304,60 +473,139 @@ function CubeScene({
   maxCountsByLayer: Record<EnsembleCubeLayer, number>
   selectedTreeCellKeys: Set<string>
   observationCellKeys: Set<string>
-  visibleLayers: VisibleLayers
+  visibleRenderLayers: VisibleRenderLayers
   selectedTreeIndex: number | null
   controlsRef: React.RefObject<OrbitControlsImpl | null>
-  onHover: (cell: EnsembleCubeCell, x: number, y: number) => void
+  onHover: (cell: CubeRenderCell, x: number, y: number) => void
   onLeave: () => void
-  onSelect: (cell: EnsembleCubeCell) => void
+  onSelect: (cell: CubeRenderCell) => void
 }) {
   const featureCount = Math.max(featureNames.length, 1)
   const width = Math.max((featureCount - 1) * CELL_GAP + CELL_SIZE, 1)
   const height = Math.max((maxDepth || 1) * CELL_GAP + CELL_SIZE, 1)
   const { camera } = useThree()
-  const visibleCells = useMemo(
-    () => cells.filter((cell) => visibleLayers[cell.layer]),
-    [cells, visibleLayers],
+  const renderCells = useMemo(() => buildRenderCells(cells), [cells])
+  const visibleRenderCells = useMemo(
+    () =>
+      selectedTreeIndex === null
+        ? renderCells
+        : renderCells.filter((cell) => cell.transitionCell.treeIndices.includes(selectedTreeIndex)),
+    [renderCells, selectedTreeIndex],
   )
   const focusX = useMemo(() => {
-    if (!visibleCells.length) {
+    if (!visibleRenderCells.length) {
       return 0
     }
-    const occupiedX = visibleCells.map((cell) => cellPosition(cell, featureCount, maxDepth)[0])
+    const occupiedX = visibleRenderCells.map((cell) => cellPosition(cell, featureCount, maxDepth)[0])
     return (Math.min(...occupiedX) + Math.max(...occupiedX)) / 2
-  }, [featureCount, maxDepth, visibleCells])
+  }, [featureCount, maxDepth, visibleRenderCells])
   const groupedCells = useMemo(
     () => {
-      const groups = new Map<string, { cells: EnsembleCubeCell[]; color: Color; opacity: number }>()
-      for (const cell of visibleCells) {
-        const maxCount = Math.max(maxCountsByLayer[cell.layer], 1)
-        const intensityBucket = Math.round(Math.sqrt(cell.count / maxCount) * 5)
+      if (!visibleRenderLayers.transition) {
+        return []
+      }
+      const groups = new Map<string, { cells: CubeRenderCell[]; color: Color; opacity: number }>()
+      for (const cell of visibleRenderCells) {
+        const maxCount = Math.max(maxCountsByLayer.transition, 1)
+        const intensityBucket = Math.round(Math.sqrt(cell.transitionCount / maxCount) * 5)
         const opacity = opacityBucket(cell, maxCountsByLayer)
-        const highlight = observationCellKeys.has(cell.key)
-          ? 'observation'
-          : selectedTreeCellKeys.has(cell.key)
-            ? 'tree'
-            : 'none'
-        const key = `${cell.layer}-${intensityBucket}-${opacity}-${highlight}`
+        const key = `transition-${intensityBucket}-${opacity}`
         const group = groups.get(key)
         if (group) {
           group.cells.push(cell)
         } else {
           groups.set(key, {
             cells: [cell],
-            color: colorForCell(cell, maxCountsByLayer, highlight),
+            color: colorForCell(cell, maxCountsByLayer),
             opacity,
           })
         }
       }
       return [...groups.values()]
     },
-    [maxCountsByLayer, observationCellKeys, selectedTreeCellKeys, visibleCells],
+    [maxCountsByLayer, visibleRenderCells, visibleRenderLayers.transition],
+  )
+  const activePathCells = useMemo(
+    () =>
+      visibleRenderLayers.transition
+        ? visibleRenderCells.filter((cell) => observationCellKeys.has(cell.transitionCell.key))
+        : [],
+    [observationCellKeys, visibleRenderCells, visibleRenderLayers.transition],
+  )
+  const maxVisiblePositiveBarCount = useMemo(
+    () =>
+      Math.max(
+        ...visibleRenderCells.map((cell) => selectedTreeCount(cell.positiveCell, selectedTreeIndex)),
+        0,
+      ),
+    [selectedTreeIndex, visibleRenderCells],
+  )
+  const maxVisibleNegativeBarCount = useMemo(
+    () =>
+      Math.max(
+        ...visibleRenderCells.map((cell) => selectedTreeCount(cell.negativeCell, selectedTreeIndex)),
+        0,
+      ),
+    [selectedTreeIndex, visibleRenderCells],
+  )
+  const positiveBars = useMemo(
+    () =>
+      visibleRenderCells
+        .map((cell) => ({
+          cell,
+          count: selectedTreeCount(cell.positiveCell, selectedTreeIndex),
+        }))
+        .filter(({ count }) => visibleRenderLayers.positiveBars && count > 0)
+        .map(({ cell, count }) => ({
+          cell,
+          direction: 1 as const,
+          count,
+          maxCount: selectedTreeIndex === null ? maxCountsByLayer.positive : maxVisiblePositiveBarCount,
+          highlighted: Boolean(cell.positiveCell && selectedTreeCellKeys.has(cell.positiveCell.key)),
+          observed: Boolean(cell.positiveCell && observationCellKeys.has(cell.positiveCell.key)),
+          color: '#2e9f62',
+        })),
+    [
+      maxCountsByLayer.positive,
+      maxVisiblePositiveBarCount,
+      observationCellKeys,
+      selectedTreeCellKeys,
+      selectedTreeIndex,
+      visibleRenderCells,
+      visibleRenderLayers.positiveBars,
+    ],
+  )
+  const negativeBars = useMemo(
+    () =>
+      visibleRenderCells
+        .map((cell) => ({
+          cell,
+          count: selectedTreeCount(cell.negativeCell, selectedTreeIndex),
+        }))
+        .filter(({ count }) => visibleRenderLayers.negativeBars && count > 0)
+        .map(({ cell, count }) => ({
+          cell,
+          direction: -1 as const,
+          count,
+          maxCount: selectedTreeIndex === null ? maxCountsByLayer.negative : maxVisibleNegativeBarCount,
+          highlighted: Boolean(cell.negativeCell && selectedTreeCellKeys.has(cell.negativeCell.key)),
+          observed: Boolean(cell.negativeCell && observationCellKeys.has(cell.negativeCell.key)),
+          color: '#c94b47',
+        })),
+    [
+      maxCountsByLayer.negative,
+      maxVisibleNegativeBarCount,
+      observationCellKeys,
+      selectedTreeCellKeys,
+      selectedTreeIndex,
+      visibleRenderCells,
+      visibleRenderLayers.negativeBars,
+    ],
   )
 
   useEffect(() => {
-    camera.lookAt(focusX, 0, LAYER_GAP)
-    controlsRef.current?.target.set(focusX, 0, LAYER_GAP)
+    camera.lookAt(focusX, 0, 0)
+    controlsRef.current?.target.set(focusX, 0, 0)
     controlsRef.current?.update()
   }, [camera, controlsRef, focusX])
 
@@ -366,7 +614,16 @@ function CubeScene({
       <ambientLight intensity={0.82} />
       <directionalLight position={[4, 7, 5]} intensity={1.25} />
       <directionalLight position={[-5, -3, -4]} intensity={0.35} />
-      <OrbitControls ref={controlsRef} makeDefault enableDamping dampingFactor={0.08} screenSpacePanning />
+      <OrbitControls
+        ref={controlsRef}
+        makeDefault
+        enableRotate
+        enableZoom
+        enablePan
+        enableDamping
+        dampingFactor={0.08}
+        screenSpacePanning
+      />
 
       <TreeRootContext
         treeRoots={treeRoots}
@@ -375,6 +632,10 @@ function CubeScene({
         maxDepth={maxDepth}
       />
 
+      <FeatureDepthGrid featureCount={featureCount} maxDepth={maxDepth} />
+      <BarInstances bars={positiveBars} featureCount={featureCount} maxDepth={maxDepth} />
+      <BarInstances bars={negativeBars} featureCount={featureCount} maxDepth={maxDepth} />
+
       {groupedCells.map((group) =>
         group.cells.length ? (
           <CellInstances
@@ -382,8 +643,6 @@ function CubeScene({
             cells={group.cells}
             featureCount={featureCount}
             maxDepth={maxDepth}
-            selectedTreeCellKeys={selectedTreeCellKeys}
-            observationCellKeys={observationCellKeys}
             opacity={group.opacity}
             color={group.color}
             onHover={onHover}
@@ -392,33 +651,12 @@ function CubeScene({
           />
         ) : null,
       )}
+      <ActiveCellOutlines cells={activePathCells} featureCount={featureCount} maxDepth={maxDepth} />
 
-      {[0, 1, 2].map((layerIndex) => {
-        const layer = Object.entries({ positive: 0, transition: 1, negative: 2 }).find(
-          ([, index]) => index === layerIndex,
-        )?.[0] as EnsembleCubeLayer
-        if (!visibleLayers[layer]) {
-          return null
-        }
-        const z = layerIndex * LAYER_GAP
-        return (
-          <group key={`plate-${layer}`} position={[0, 0, z]}>
-            <mesh>
-              <boxGeometry args={[width + 0.34, height + 0.34, 0.018]} />
-              <meshBasicMaterial color="#ffffff" transparent opacity={layer === 'transition' ? 0.105 : 0.065} />
-            </mesh>
-            <Text
-              position={[-width / 2 - 0.72, height / 2 + 0.36, 0.04]}
-              fontSize={0.13}
-              color="#4a4f4a"
-              anchorX="left"
-              anchorY="middle"
-            >
-              {LAYER_LABELS[layer]}
-            </Text>
-          </group>
-        )
-      })}
+      <mesh position={[0, 0, -0.012]}>
+        <boxGeometry args={[width + 0.34, height + 0.34, 0.018]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.12} />
+      </mesh>
 
       <Text position={[0, -height / 2 - 0.48, -0.2]} fontSize={0.15} color="#1b1e1d">
         X = Features
@@ -431,8 +669,30 @@ function CubeScene({
       >
         Y = Depth
       </Text>
-      <Text position={[width / 2 + 0.95, height / 2 + 0.34, LAYER_GAP]} rotation={[0, -Math.PI / 2, 0]} fontSize={0.14} color="#1b1e1d">
-        Z = Outcome / transition layer
+      <Text
+        position={[-width / 2 - 0.78, height / 2 + 0.36, 0]}
+        fontSize={0.13}
+        color="#4a4f4a"
+        anchorX="left"
+        anchorY="middle"
+      >
+        Transition / internal usage
+      </Text>
+      <Text
+        position={[width / 2 + 0.92, height / 2 + 0.28, 0.72]}
+        rotation={[0, -Math.PI / 2, 0]}
+        fontSize={0.13}
+        color="#268554"
+      >
+        +Z = Positive leaf direction
+      </Text>
+      <Text
+        position={[width / 2 + 0.92, height / 2 + 0.28, -0.72]}
+        rotation={[0, -Math.PI / 2, 0]}
+        fontSize={0.13}
+        color="#a8403d"
+      >
+        -Z = Negative leaf direction
       </Text>
     </>
   )
@@ -448,15 +708,20 @@ function summarizeTrees(treeIndices: number[]) {
   return `${treeIndices.slice(0, 12).join(', ')} +${treeIndices.length - 12} more`
 }
 
-export function EnsembleStructureCube({ trees, featureMetadata, treeResults }: EnsembleStructureCubeProps) {
-  const [selectedTreeIndex, setSelectedTreeIndex] = useState<number | null>(null)
-  const [visibleLayers, setVisibleLayers] = useState<VisibleLayers>({
-    positive: true,
+export function EnsembleStructureCube({
+  trees,
+  featureMetadata,
+  treeResults,
+  selectedTreeIndex,
+  onSelectTree,
+}: EnsembleStructureCubeProps) {
+  const [visibleRenderLayers, setVisibleRenderLayers] = useState<VisibleRenderLayers>({
     transition: true,
-    negative: true,
+    positiveBars: true,
+    negativeBars: true,
   })
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
-  const [selectedCell, setSelectedCell] = useState<EnsembleCubeCell | null>(null)
+  const [selectedCell, setSelectedCell] = useState<CubeRenderCell | null>(null)
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   const cubeData = useMemo(
     () => buildEnsembleCubeData(trees, featureMetadata, selectedTreeIndex, treeResults),
@@ -467,14 +732,14 @@ export function EnsembleStructureCube({ trees, featureMetadata, treeResults }: E
     controlsRef.current?.reset()
   }
 
-  const toggleLayer = (layer: EnsembleCubeLayer) => {
-    if (selectedCell?.layer === layer && visibleLayers[layer]) {
+  const toggleLayer = (layer: CubeRenderLayer) => {
+    if (selectedCell && layer === 'transition' && visibleRenderLayers.transition) {
       setSelectedCell(null)
     }
-    if (tooltip?.cell.layer === layer && visibleLayers[layer]) {
+    if (tooltip && layer === 'transition' && visibleRenderLayers.transition) {
       setTooltip(null)
     }
-    setVisibleLayers((current) => ({
+    setVisibleRenderLayers((current) => ({
       ...current,
       [layer]: !current[layer],
     }))
@@ -485,19 +750,19 @@ export function EnsembleStructureCube({ trees, featureMetadata, treeResults }: E
       <div className="panel-header ensemble-cube-header">
         <div>
           <h2>Ensemble Structure Cube</h2>
-          <span className="panel-caption">Feature/depth/layer density across the forest</span>
+          <span className="panel-caption">Feature/depth transition usage with directional leaf connections</span>
         </div>
         <div className="ensemble-cube-actions">
-          <div className="ensemble-cube-layer-toggles" aria-label="Cube plate visibility">
-            {LAYERS.map((layer) => (
+          <div className="ensemble-cube-layer-toggles" aria-label="Cube visual visibility">
+            {RENDER_LAYERS.map((layer) => (
               <button
                 key={layer}
                 type="button"
-                className={visibleLayers[layer] ? 'ensemble-cube-layer-toggle active' : 'ensemble-cube-layer-toggle'}
+                className={visibleRenderLayers[layer] ? 'ensemble-cube-layer-toggle active' : 'ensemble-cube-layer-toggle'}
                 onClick={() => toggleLayer(layer)}
-                aria-pressed={visibleLayers[layer]}
+                aria-pressed={visibleRenderLayers[layer]}
               >
-                {LAYER_LABELS[layer]}
+                {RENDER_LAYER_LABELS[layer]}
               </button>
             ))}
           </div>
@@ -505,7 +770,7 @@ export function EnsembleStructureCube({ trees, featureMetadata, treeResults }: E
             Tree
             <select
               value={selectedTreeIndex ?? ''}
-              onChange={(event) => setSelectedTreeIndex(event.target.value === '' ? null : Number(event.target.value))}
+              onChange={(event) => onSelectTree(event.target.value === '' ? null : Number(event.target.value))}
             >
               <option value="">All</option>
               {trees.map((tree) => (
@@ -535,7 +800,7 @@ export function EnsembleStructureCube({ trees, featureMetadata, treeResults }: E
                 maxCountsByLayer={cubeData.maxCountsByLayer}
                 selectedTreeCellKeys={cubeData.selectedTreeCellKeys}
                 observationCellKeys={cubeData.observationCellKeys}
-                visibleLayers={visibleLayers}
+                visibleRenderLayers={visibleRenderLayers}
                 selectedTreeIndex={selectedTreeIndex}
                 controlsRef={controlsRef}
                 onHover={(cell, x, y) => setTooltip({ cell, x, y })}
@@ -546,8 +811,10 @@ export function EnsembleStructureCube({ trees, featureMetadata, treeResults }: E
             {tooltip ? (
               <div className="ensemble-cube-tooltip" style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}>
                 <strong>{tooltip.cell.featureName}</strong>
-                <span>{`Depth ${tooltip.cell.depth} · ${LAYER_LABELS[tooltip.cell.layer]}`}</span>
-                <span>{`Count ${tooltip.cell.count}`}</span>
+                <span>{`Depth ${tooltip.cell.depth} · ${LAYER_LABELS.transition}`}</span>
+                <span>{`Transition count ${tooltip.cell.transitionCount}`}</span>
+                <span>{`Positive leaf connections ${tooltip.cell.positiveConnectionCount}`}</span>
+                <span>{`Negative leaf connections ${tooltip.cell.negativeConnectionCount}`}</span>
                 <span>{`Trees ${summarizeTrees(tooltip.cell.treeIndices)}`}</span>
               </div>
             ) : null}
@@ -557,10 +824,36 @@ export function EnsembleStructureCube({ trees, featureMetadata, treeResults }: E
             <div className="ensemble-cube-annotations">
               <span>X = Features</span>
               <span>Y = Depth</span>
-              <span>Z = Outcome / transition layer</span>
-              <span>Middle plate = feature transition/internal node usage</span>
-              <span>Positive plate = feature nodes connected to positive leaves</span>
-              <span>Negative plate = feature nodes connected to negative leaves</span>
+              <span>+Z = Positive leaf direction</span>
+              <span>-Z = Negative leaf direction</span>
+              <span>
+                Observation highlight =
+                {selectedTreeIndex === null ? ' union of active paths across all trees' : ` active path for tree ${selectedTreeIndex}`}
+              </span>
+              <div className="ensemble-cube-color-legend" aria-label="Transition count color scale">
+                <span>Transition count</span>
+                <div className="ensemble-cube-color-scale" />
+                <div className="ensemble-cube-color-labels">
+                  <span>Low</span>
+                  <span>High</span>
+                </div>
+              </div>
+              <span className="ensemble-cube-legend-row">
+                <i className="ensemble-cube-legend-swatch cube" />
+                Cube fill color = transition count
+              </span>
+              <span className="ensemble-cube-legend-row">
+                <i className="ensemble-cube-outline-swatch" />
+                Black cube outline = active path cell
+              </span>
+              <span className="ensemble-cube-legend-row">
+                <i className="ensemble-cube-legend-swatch positive" />
+                Green bar = positive leaf connection count
+              </span>
+              <span className="ensemble-cube-legend-row">
+                <i className="ensemble-cube-legend-swatch negative" />
+                Red bar = negative leaf connection count
+              </span>
             </div>
 
             {selectedCell ? (
@@ -575,12 +868,20 @@ export function EnsembleStructureCube({ trees, featureMetadata, treeResults }: E
                     <dd>{selectedCell.depth}</dd>
                   </div>
                   <div>
-                    <dt>Layer</dt>
-                    <dd>{LAYER_LABELS[selectedCell.layer]}</dd>
+                    <dt>Encoding</dt>
+                    <dd>Transition cube with leaf-direction bars</dd>
                   </div>
                   <div>
-                    <dt>Count</dt>
-                    <dd>{selectedCell.count}</dd>
+                    <dt>Transition</dt>
+                    <dd>{selectedCell.transitionCount}</dd>
+                  </div>
+                  <div>
+                    <dt>Positive</dt>
+                    <dd>{selectedCell.positiveConnectionCount}</dd>
+                  </div>
+                  <div>
+                    <dt>Negative</dt>
+                    <dd>{selectedCell.negativeConnectionCount}</dd>
                   </div>
                   <div>
                     <dt>Trees</dt>
@@ -595,17 +896,9 @@ export function EnsembleStructureCube({ trees, featureMetadata, treeResults }: E
                     <dd>{`+${selectedCell.positiveLeafCount} / -${selectedCell.negativeLeafCount}`}</dd>
                   </div>
                 </dl>
-                <div className="ensemble-cube-paths">
-                  <span className="panel-caption">Example paths</span>
-                  {selectedCell.examplePaths.length ? (
-                    selectedCell.examplePaths.map((path) => <p key={path}>{path}</p>)
-                  ) : (
-                    <p>No path examples available for this cell.</p>
-                  )}
-                </div>
               </div>
             ) : (
-              <div className="empty-state ensemble-cube-empty-detail">Click a cell to inspect trees, nodes, outcomes, and example paths.</div>
+              <div className="empty-state ensemble-cube-empty-detail">Click a cell to inspect trees, nodes, and outcomes.</div>
             )}
           </aside>
         </div>
