@@ -1,0 +1,46 @@
+{
+  "features": [
+    {
+      "name": "x1",
+      "short_name": "x1",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 1.0,
+      "default_value": 0.5,
+      "options": []
+    },
+    {
+      "name": "x2",
+      "short_name": "x2",
+      "type": "numeric",
+      "missing_allowed": false,
+      "min_value": 0.0,
+      "max_value": 1.0,
+      "default_value": 0.5,
+      "options": []
+    },
+    {
+      "name": "x3",
+      "short_name": "x3",
+      "type": "binary",
+      "missing_allowed": false,
+      "min_value": null,
+      "max_value": null,
+      "default_value": 0,
+      "options": [
+        {
+          "value": 0,
+          "label": "0",
+          "encoded_value": 0
+        },
+        {
+          "value": 1,
+          "label": "1",
+          "encoded_value": 1
+        }
+      ]
+    }
+  ],
+  "target_column": "target"
+}
